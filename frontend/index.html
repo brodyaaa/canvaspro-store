@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnLabs - Premium Canvas Automation Tools</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
+    
+    <!-- Stripe - NO HARDCODED KEYS! -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
+    <!-- Your existing styles here... -->
+</head>
+<body>
+    <!-- Your existing HTML content here... -->
+
+    <script>
+        // Configuration
+        const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+        
+        // SECURE: Stripe will be initialized from backend
+        let stripe = null;
+        
+        // Initialize Stripe securely from backend
+        async function initializeStripe() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/config`);
+                const config = await response.json();
+                
+                if (config.stripePublishableKey) {
+                    stripe = Stripe(config.stripePublishableKey);
+                    console.log('Stripe initialized successfully');
+                } else if (config.testMode) {
+                    console.log('Running in test mode - no Stripe key configured');
+                }
+            } catch (error) {
+                console.error('Failed to initialize Stripe:', error);
+                // Site will still work for test orders
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initializeStripe);
+        
+        // Crypto addresses
+        const CRYPTO_ADDRESSES = {
+            btc: 'bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8',
+            eth: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            sol: 'C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm',
+            base: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            polygon: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            monad: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            sui: '0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480'
+        };
+        
+        let selectedProduct = null;
+        let selectedPlan = 'weekly';
+        let selectedPrice = 13.00;
+
+        // Toggle payment method
+        function togglePaymentMethod() {
+            const method = document.getElementById('paymentMethod').value;
+            const cryptoInfo = document.getElementById('cryptoInfo');
+            
+            if (method === 'crypto') {
+                cryptoInfo.style.display = 'block';
+            } else {
+                cryptoInfo.style.display = 'none';
+            }
+        }
+
+        // Update crypto address based on selection
+        function updateCryptoAddress() {
+            const cryptoType = document.getElementById('cryptoType').value;
+            const addressDiv = document.getElementById('cryptoAddress');
+            addressDiv.textContent = CRYPTO_ADDRESSES[cryptoType];
+        }
+
+        // Copy crypto address
+        function copyCryptoAddress() {
+            const address = document.getElementById('cryptoAddress').textContent;
+            navigator.clipboard.writeText(address).then(() => {
+                alert('Address copied to clipboard!');
+            });
+        }
+
+        // Product selection
+        function openProductModal(product) {
+            selectedProduct = product;
+            document.getElementById('modalTitle').textContent = 'CanvasPro - Select Your Plan';
+            document.getElementById('purchaseModal').classList.add('active');
+        }
+
+        // Plan selection
+        function selectPlan(plan, price) {
+            selectedPlan = plan;
+            selectedPrice = price;
+            
+            document.querySelectorAll('.price-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        // Process payment
+        async function processPayment() {
+            const email = document.getElementById('email').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+
+            if (paymentMethod === 'crypto') {
+                // For crypto, just show instructions
+                alert(`Crypto Payment Instructions:\n\n1. Send ${selectedPrice} USD worth of crypto to the displayed address\n2. Copy your transaction ID\n3. Join our Discord and send:\n   - Transaction ID\n   - Your email: ${email}\n   - Plan: ${selectedPlan}\n\nYou'll receive your key within 24 hours!`);
+                return;
+            }
+
+            document.getElementById('checkoutForm').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            try {
+                console.log('Sending request to backend...');
+                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        plan: selectedPlan,
+                        price: selectedPrice,
+                        product: selectedProduct || 'canvaspro'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Response:', data);
+                
+                if (data.url && stripe) {
+                    // Redirect to Stripe
+                    window.location.href = data.url;
+                } else if (data.testMode && data.license) {
+                    // Show test license
+                    showLicenseKey(data.license, data.orderNumber);
+                } else if (data.success && data.license) {
+                    // Direct license
+                    showLicenseKey(data.license, data.orderNumber);
+                } else if (data.url && !stripe) {
+                    // Stripe URL but no client-side Stripe (shouldn't happen)
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL or license received');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                
+                // Check if backend is down
+                if (error.message.includes('Failed to fetch')) {
+                    alert('Backend server is not responding. Please make sure Replit server is running or contact support.');
+                } else {
+                    alert(`Error: ${error.message}\n\nPlease try again or contact support.`);
+                }
+                
+                document.getElementById('checkoutForm').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Show license key
+        function showLicenseKey(key, orderNumber) {
+            alert(`✅ Order Complete!\n\nOrder #: ${orderNumber}\nLicense Key: ${key}\n\nCheck your email for details!`);
+            closeModal('purchaseModal');
+        }
+
+        // Client area
+        function openClientArea() {
+            document.getElementById('clientAreaModal').classList.add('active');
+        }
+
+        async function lookupOrder() {
+            const lookup = document.getElementById('clientLookup').value;
+            
+            if (!lookup) {
+                alert('Please enter your email or license key');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lookup })
+                });
+
+                const data = await response.json();
+                
+                if (data.found) {
+                    document.getElementById('clientLogin').style.display = 'none';
+                    document.getElementById('orderDetails').style.display = 'block';
+                    document.getElementById('licenseKeyDisplay').textContent = data.order.licenseKey;
+                } else {
+                    alert('No order found');
+                }
+            } catch (error) {
+                alert('Error looking up order');
+            }
+        }
+
+        function copyLicense() {
+            const text = document.getElementById('licenseKeyDisplay').textContent;
+            navigator.clipboard.writeText(text);
+            alert('License key copied!');
+        }
+
+        // Modal controls
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            document.getElementById('checkoutForm').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+
+        // Handle payment success redirect
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                // Show success message
+                alert('🎉 Payment Successful!\n\nYour license key has been sent to your email.\nCheck your inbox (and spam folder).\n\nJoin our Discord for support!');
+                // Clean URL
+                window.history.replaceState({}, '', '/');
+            }
+        });
+    </script>
+</body>
+</html>
