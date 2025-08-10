@@ -1006,10 +1006,10 @@ app.delete('/api/admin/delete-key/:keyId', requireAdmin, (req, res) => {
     );
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server - FIXED FOR REPLIT
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Enhanced CanvasPro Backend running on port ${PORT}`);
-    console.log(`📍 Health: http://localhost:${PORT}/`);
+    console.log(`📍 Health: http://0.0.0.0:${PORT}/`);
     console.log(`🔑 Stripe: ${stripe ? 'Live Mode ✅' : 'Test Mode ⚠️'}`);
     console.log(`📧 Email: ${resend ? 'Enabled ✅' : 'Disabled ⚠️'}`);
     console.log(`🔒 Device Binding: ${SECURITY.deviceBindingEnabled ? 'Enabled' : 'Disabled'}`);
