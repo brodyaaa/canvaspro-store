@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CanvasPro Admin Panel</title>
+    <title>LearnLabs Admin Panel</title>
     <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
     
     <style>
@@ -365,7 +365,7 @@
     <div class="login-container" id="loginScreen">
         <div class="login-box">
             <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="login-logo">
-            <h1 class="login-title">CanvasPro Admin</h1>
+            <h1 class="login-title">LearnLabs Admin</h1>
             
             <form id="loginForm">
                 <div class="form-group">
@@ -387,7 +387,7 @@
         <div class="admin-header">
             <div class="admin-title">
                 <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="admin-logo">
-                CanvasPro Admin Panel
+                LearnLabs Admin Panel
             </div>
             <div class="admin-stats">
                 <div class="stat-item">
@@ -551,7 +551,9 @@
     <script>
         // Configuration
         let config = {
-            backendUrl: 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',
+            backendUrl: window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000' 
+                : 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',
             refreshInterval: 30000,
             isLoggedIn: false
         };
