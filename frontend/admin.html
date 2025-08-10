@@ -692,13 +692,13 @@
 
                 row.innerHTML = `
                     <td>
-                        <div class="key-display" onclick="copyKey('${key.key}')">${key.key}</div>
-                        ${key.device_id ? `<div class="device-info">Device: ${key.device_id.substring(0, 12)}...</div>` : ''}
+                        <div class="key-display" onclick="copyKey('${key.key_display || 'HIDDEN'}')">${key.key_display || 'HIDDEN'}</div>
+                        ${key.device_count ? `<div class="device-info">Devices: ${key.device_count}</div>` : ''}
                     </td>
                     <td>${key.email || 'N/A'}</td>
                     <td><span class="badge">${key.plan}</span></td>
                     <td><span class="${statusClass}">${status.toUpperCase()}</span></td>
-                    <td>${key.last_used || 'Never'}</td>
+                    <td>${key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}</td>
                     <td>${new Date(key.expires_at).toLocaleDateString()}</td>
                     <td>
                         <button class="btn btn-primary" onclick="editKey('${key.id}')">Edit</button>
