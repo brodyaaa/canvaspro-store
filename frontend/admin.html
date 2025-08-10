@@ -571,7 +571,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Check if already logged in
             if (localStorage.getItem('cpAdminAuth') === 'true') {
-                showAdminPanel();
+                adminCredentials = localStorage.getItem('cpAdminCreds');
+                if (adminCredentials) {
+                    showAdminPanel();
+                } else {
+                    // Credentials missing, force re-login
+                    logout();
+                }
             }
 
             // Setup login form
@@ -589,8 +595,13 @@
             const password = document.getElementById('password').value;
 
             if (ADMIN_CREDENTIALS[username] && ADMIN_CREDENTIALS[username] === password) {
+                // Create Basic Auth credentials
+                adminCredentials = btoa(`${username}:${password}`);
+                
                 localStorage.setItem('cpAdminAuth', 'true');
                 localStorage.setItem('cpAdminUser', username);
+                localStorage.setItem('cpAdminCreds', adminCredentials);
+                
                 showAdminPanel();
                 showNotification('Login successful!', 'success');
             } else {
@@ -601,12 +612,17 @@
         function logout() {
             localStorage.removeItem('cpAdminAuth');
             localStorage.removeItem('cpAdminUser');
+            localStorage.removeItem('cpAdminCreds');
+            adminCredentials = null;
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('adminPanel').style.display = 'none';
             config.isLoggedIn = false;
         }
 
         function showAdminPanel() {
+            // Load stored credentials
+            adminCredentials = localStorage.getItem('cpAdminCreds');
+            
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
             config.isLoggedIn = true;
@@ -642,8 +658,16 @@
             }
         }
 
+        // Enhanced authentication storage
+        let adminCredentials = null;
+
         // Data Loading Functions
         async function refreshData() {
+            if (!adminCredentials) {
+                console.log('No admin credentials stored');
+                return;
+            }
+
             try {
                 const [stats, keys, orders] = await Promise.all([
                     fetchData('/api/admin/stats'),
@@ -655,7 +679,249 @@
                 if (stats) {
                     document.getElementById('totalKeys').textContent = stats.totalKeys || 0;
                     document.getElementById('activeKeys').textContent = stats.activeKeys || 0;
-                    document.getElementById('todayRevenue').textContent = '$' + (stats.todayRevenue || 0);
+                    document.getElementById('todayRevenue').textContent = '
+
+        function loadKeys() {
+            const tbody = document.getElementById('keysTableBody');
+            tbody.innerHTML = '';
+
+            keysData.forEach(key => {
+                const row = document.createElement('tr');
+                const status = new Date(key.expires_at) < new Date() ? 'expired' : 'active';
+                const statusClass = status === 'active' ? 'status-active' : 'status-expired';
+
+                row.innerHTML = `
+                    <td>
+                        <div class="key-display" onclick="copyKey('${key.key}')">${key.key}</div>
+                        ${key.device_id ? `<div class="device-info">Device: ${key.device_id.substring(0, 12)}...</div>` : ''}
+                    </td>
+                    <td>${key.email || 'N/A'}</td>
+                    <td><span class="badge">${key.plan}</span></td>
+                    <td><span class="${statusClass}">${status.toUpperCase()}</span></td>
+                    <td>${key.last_used || 'Never'}</td>
+                    <td>${new Date(key.expires_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editKey('${key.id}')">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteKey('${key.id}')">Delete</button>
+                        ${status === 'expired' ? `<button class="btn btn-success" onclick="renewKey('${key.id}')">Renew</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+
+            ordersData.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.order_number}</td>
+                    <td>${order.email}</td>
+                    <td>${order.plan}</td>
+                    <td>$${order.amount}</td>
+                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    <td><span class="status-active">COMPLETED</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewOrder('${order.id}')">View</button>
+                        <button class="btn btn-warning" onclick="refundOrder('${order.id}')">Refund</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadUsers() {
+            // Group keys by email to create user data
+            const userMap = {};
+            keysData.forEach(key => {
+                if (key.email) {
+                    if (!userMap[key.email]) {
+                        userMap[key.email] = {
+                            email: key.email,
+                            keys: 0,
+                            totalSpent: 0,
+                            lastActive: key.last_used || 'Never'
+                        };
+                    }
+                    userMap[key.email].keys++;
+                    userMap[key.email].totalSpent += key.price || 0;
+                }
+            });
+
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            Object.values(userMap).forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email}</td>
+                    <td>${user.keys}</td>
+                    <td>$${user.totalSpent.toFixed(2)}</td>
+                    <td>${user.lastActive}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewUser('${user.email}')">View</button>
+                        <button class="btn btn-warning" onclick="suspendUser('${user.email}')">Suspend</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Key Generation
+        async function handleGenerate(e) {
+            e.preventDefault();
+            
+            if (!adminCredentials) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+            
+            const email = document.getElementById('genEmail').value;
+            const plan = document.getElementById('genPlan').value;
+            const price = parseFloat(document.getElementById('genPrice').value);
+            const customExpiry = document.getElementById('genExpiry').value;
+
+            try {
+                const response = await fetch(config.backendUrl + '/api/admin/generate-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Basic ${adminCredentials}`
+                    },
+                    body: JSON.stringify({
+                        email,
+                        plan,
+                        price,
+                        customExpiry: customExpiry || null
+                    })
+                });
+
+                if (response.status === 401) {
+                    showNotification('Admin authentication failed, please login again', 'error');
+                    logout();
+                    return;
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('newKeyDisplay').textContent = result.key;
+                    document.getElementById('generatedKey').style.display = 'block';
+                    document.getElementById('generateForm').reset();
+                    showNotification('Key generated successfully!', 'success');
+                    refreshData(); // Refresh data to show new key
+                } else {
+                    showNotification(result.error || 'Failed to generate key', 'error');
+                }
+            } catch (error) {
+                console.error('Generate key error:', error);
+                showNotification('Error generating key: ' + error.message, 'error');
+            }
+        }
+
+        // Utility Functions
+        function copyKey(key) {
+            navigator.clipboard.writeText(key).then(() => {
+                showNotification('Key copied to clipboard!', 'success');
+            });
+        }
+
+        function searchKeys(query) {
+            const rows = document.querySelectorAll('#keysTableBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function saveSettings() {
+            config.backendUrl = document.getElementById('backendUrl').value;
+            config.refreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
+            
+            localStorage.setItem('cpAdminConfig', JSON.stringify(config));
+            showNotification('Settings saved!', 'success');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('cpAdminConfig');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
+                document.getElementById('backendUrl').value = config.backendUrl;
+                document.getElementById('refreshInterval').value = config.refreshInterval / 1000;
+            }
+        }
+
+        // Key Management Functions
+        async function editKey(keyId) {
+            // TODO: Implement key editing modal
+            showNotification('Edit key functionality coming soon', 'warning');
+        }
+
+        async function deleteKey(keyId) {
+            if (!confirm('Are you sure you want to delete this key?')) return;
+            
+            if (!adminCredentials) {
+                showNotification('Please login first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(config.backendUrl + `/api/admin/delete-key/${keyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Basic ${adminCredentials}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showNotification('Admin authentication failed, please login again', 'error');
+                    logout();
+                    return;
+                }
+                
+                if (response.ok) {
+                    showNotification('Key deleted successfully!', 'success');
+                    refreshData();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete key', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting key: ' + error.message, 'error');
+            }
+        }
+
+        async function renewKey(keyId) {
+            // TODO: Implement key renewal
+            showNotification('Key renewal functionality coming soon', 'warning');
+        }
+
+        function viewOrder(orderId) {
+            // TODO: Implement order details modal
+            showNotification('Order details coming soon', 'warning');
+        }
+
+        function viewUser(email) {
+            // TODO: Implement user details modal
+            showNotification('User details coming soon', 'warning');
+        }
+    </script>
+</body>
+</html> + (stats.todayRevenue || 0);
                 }
 
                 // Store data
@@ -678,8 +944,24 @@
         }
 
         async function fetchData(endpoint) {
+            if (!adminCredentials) {
+                throw new Error('No admin credentials');
+            }
+
             try {
-                const response = await fetch(config.backendUrl + endpoint);
+                const response = await fetch(config.backendUrl + endpoint, {
+                    headers: {
+                        'Authorization': `Basic ${adminCredentials}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showNotification('Admin session expired, please login again', 'error');
+                    logout();
+                    return null;
+                }
+                
                 if (response.ok) {
                     return await response.json();
                 }
