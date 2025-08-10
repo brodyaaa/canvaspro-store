@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CanvasPro Admin Panel</title>
+    <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #ff6633;
+            --primary-dark: #ff4411;
+            --dark: #1a1a1a;
+            --darker: #0f0f0f;
+            --purple: #6b46c1;
+            --blue: #3b82f6;
+            --green: #10b981;
+            --red: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--darker);
+            color: white;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(107, 70, 193, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+        }
+
+        /* Login Screen */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: var(--dark);
+            border: 2px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 12px;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--darker);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 102, 51, 0.4);
+        }
+
+        /* Main Admin Panel */
+        .admin-container {
+            display: none;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            background: var(--dark);
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .admin-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        .admin-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .logout-btn {
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Tabs */
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: var(--darker);
+            color: #888;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--dark);
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        th {
+            background: var(--darker);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .status-active {
+            color: var(--green);
+        }
+
+        .status-expired {
+            color: var(--red);
+        }
+
+        .status-pending {
+            color: #f59e0b;
+        }
+
+        /* Action Buttons */
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: var(--blue); color: white; }
+        .btn-success { background: var(--green); color: white; }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Forms */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-select {
+            padding: 8px 12px;
+            background: var(--darker);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            color: white;
+        }
+
+        /* Key Display */
+        .key-display {
+            font-family: 'Courier New', monospace;
+            background: var(--darker);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #2a2a2a;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .key-display:hover {
+            background: #2a2a2a;
+        }
+
+        .device-info {
+            font-size: 11px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        /* Search */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 16px;
+            background: var(--darker);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            color: white;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success { background: var(--green); }
+        .notification.error { background: var(--red); }
+        .notification.warning { background: #f59e0b; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .admin-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="login-logo">
+            <h1 class="login-title">CanvasPro Admin</h1>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-container" id="adminPanel">
+        <!-- Header -->
+        <div class="admin-header">
+            <div class="admin-title">
+                <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="admin-logo">
+                CanvasPro Admin Panel
+            </div>
+            <div class="admin-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalKeys">0</div>
+                    <div class="stat-label">Total Keys</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeKeys">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="todayRevenue">$0</div>
+                    <div class="stat-label">Today Revenue</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="showTab('keys')">🔑 Keys</button>
+            <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
+            <button class="tab-btn" onclick="showTab('users')">👥 Users</button>
+            <button class="tab-btn" onclick="showTab('generate')">➕ Generate</button>
+            <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
+        </div>
+
+        <!-- Keys Tab -->
+        <div class="tab-content active" id="keysTab">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search keys..." onkeyup="searchKeys(this.value)">
+            </div>
+            
+            <div class="table-container">
+                <table id="keysTable">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Device</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysTableBody">
+                        <!-- Keys will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div class="tab-content" id="ordersTab">
+            <div class="table-container">
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <!-- Orders will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-content" id="usersTab">
+            <div class="table-container">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Keys</th>
+                            <th>Total Spent</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Generate Tab -->
+        <div class="tab-content" id="generateTab">
+            <h3 style="margin-bottom: 20px;">Generate New Key</h3>
+            
+            <form id="generateForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="genEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Plan</label>
+                        <select id="genPlan" class="form-select" required>
+                            <option value="test">Test (1 hour)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="lifetime">Lifetime</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="number" id="genPrice" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Expiry (Optional)</label>
+                        <input type="datetime-local" id="genExpiry">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success" style="padding: 12px 24px;">Generate Key</button>
+            </form>
+
+            <div id="generatedKey" style="display: none; margin-top: 20px; padding: 20px; background: var(--darker); border-radius: 8px;">
+                <h4>Generated Key:</h4>
+                <div class="key-display" id="newKeyDisplay" onclick="copyKey(this.textContent)">
+                    <!-- Generated key will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settingsTab">
+            <h3 style="margin-bottom: 20px;">System Settings</h3>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Backend URL</label>
+                    <input type="url" id="backendUrl" value="https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev">
+                </div>
+                <div class="form-group">
+                    <label>Auto-refresh interval (seconds)</label>
+                    <input type="number" id="refreshInterval" value="30" min="10">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            <button class="btn btn-warning" onclick="refreshData()">Refresh All Data</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let config = {
+            backendUrl: 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',
+            refreshInterval: 30000,
+            isLoggedIn: false
+        };
+
+        // Admin credentials (change these!)
+        const ADMIN_CREDENTIALS = {
+            'admin': 'CanvasPro2024!',
+            'brodypeeler': 'BrodyAdmin123!'
+        };
+
+        // Data storage
+        let keysData = [];
+        let ordersData = [];
+        let usersData = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if already logged in
+            if (localStorage.getItem('cpAdminAuth') === 'true') {
+                showAdminPanel();
+            }
+
+            // Setup login form
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('generateForm').addEventListener('submit', handleGenerate);
+
+            // Load settings
+            loadSettings();
+        });
+
+        // Authentication
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (ADMIN_CREDENTIALS[username] && ADMIN_CREDENTIALS[username] === password) {
+                localStorage.setItem('cpAdminAuth', 'true');
+                localStorage.setItem('cpAdminUser', username);
+                showAdminPanel();
+                showNotification('Login successful!', 'success');
+            } else {
+                showNotification('Invalid credentials!', 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('cpAdminAuth');
+            localStorage.removeItem('cpAdminUser');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminPanel').style.display = 'none';
+            config.isLoggedIn = false;
+        }
+
+        function showAdminPanel() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            config.isLoggedIn = true;
+            
+            // Load initial data
+            refreshData();
+            
+            // Setup auto-refresh
+            setInterval(refreshData, config.refreshInterval);
+        }
+
+        // Tab Management
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Load tab-specific data
+            switch(tabName) {
+                case 'keys':
+                    loadKeys();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+            }
+        }
+
+        // Data Loading Functions
+        async function refreshData() {
+            try {
+                const [stats, keys, orders] = await Promise.all([
+                    fetchData('/api/admin/stats'),
+                    fetchData('/api/admin/keys'),
+                    fetchData('/api/admin/orders')
+                ]);
+
+                // Update stats
+                if (stats) {
+                    document.getElementById('totalKeys').textContent = stats.totalKeys || 0;
+                    document.getElementById('activeKeys').textContent = stats.activeKeys || 0;
+                    document.getElementById('todayRevenue').textContent = '$' + (stats.todayRevenue || 0);
+                }
+
+                // Store data
+                keysData = keys || [];
+                ordersData = orders || [];
+
+                // Update current tab
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    const tabId = activeTab.id;
+                    if (tabId === 'keysTab') loadKeys();
+                    else if (tabId === 'ordersTab') loadOrders();
+                    else if (tabId === 'usersTab') loadUsers();
+                }
+
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showNotification('Error loading data', 'error');
+            }
+        }
+
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(config.backendUrl + endpoint);
+                if (response.ok) {
+                    return await response.json();
+                }
+                throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        function loadKeys() {
+            const tbody = document.getElementById('keysTableBody');
+            tbody.innerHTML = '';
+
+            keysData.forEach(key => {
+                const row = document.createElement('tr');
+                const status = new Date(key.expires_at) < new Date() ? 'expired' : 'active';
+                const statusClass = status === 'active' ? 'status-active' : 'status-expired';
+
+                row.innerHTML = `
+                    <td>
+                        <div class="key-display" onclick="copyKey('${key.key}')">${key.key}</div>
+                        ${key.device_id ? `<div class="device-info">Device: ${key.device_id.substring(0, 12)}...</div>` : ''}
+                    </td>
+                    <td>${key.email || 'N/A'}</td>
+                    <td><span class="badge">${key.plan}</span></td>
+                    <td><span class="${statusClass}">${status.toUpperCase()}</span></td>
+                    <td>${key.last_used || 'Never'}</td>
+                    <td>${new Date(key.expires_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editKey('${key.id}')">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteKey('${key.id}')">Delete</button>
+                        ${status === 'expired' ? `<button class="btn btn-success" onclick="renewKey('${key.id}')">Renew</button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+
+            ordersData.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.order_number}</td>
+                    <td>${order.email}</td>
+                    <td>${order.plan}</td>
+                    <td>$${order.amount}</td>
+                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    <td><span class="status-active">COMPLETED</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewOrder('${order.id}')">View</button>
+                        <button class="btn btn-warning" onclick="refundOrder('${order.id}')">Refund</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadUsers() {
+            // Group keys by email to create user data
+            const userMap = {};
+            keysData.forEach(key => {
+                if (key.email) {
+                    if (!userMap[key.email]) {
+                        userMap[key.email] = {
+                            email: key.email,
+                            keys: 0,
+                            totalSpent: 0,
+                            lastActive: key.last_used || 'Never'
+                        };
+                    }
+                    userMap[key.email].keys++;
+                    userMap[key.email].totalSpent += key.price || 0;
+                }
+            });
+
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            Object.values(userMap).forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.email}</td>
+                    <td>${user.keys}</td>
+                    <td>$${user.totalSpent.toFixed(2)}</td>
+                    <td>${user.lastActive}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewUser('${user.email}')">View</button>
+                        <button class="btn btn-warning" onclick="suspendUser('${user.email}')">Suspend</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Key Generation
+        async function handleGenerate(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('genEmail').value;
+            const plan = document.getElementById('genPlan').value;
+            const price = parseFloat(document.getElementById('genPrice').value);
+            const customExpiry = document.getElementById('genExpiry').value;
+
+            try {
+                const response = await fetch(config.backendUrl + '/api/admin/generate-key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        plan,
+                        price,
+                        customExpiry: customExpiry || null,
+                        adminUser: localStorage.getItem('cpAdminUser')
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('newKeyDisplay').textContent = result.key;
+                    document.getElementById('generatedKey').style.display = 'block';
+                    document.getElementById('generateForm').reset();
+                    showNotification('Key generated successfully!', 'success');
+                    refreshData(); // Refresh data to show new key
+                } else {
+                    showNotification(result.error || 'Failed to generate key', 'error');
+                }
+            } catch (error) {
+                console.error('Generate key error:', error);
+                showNotification('Error generating key', 'error');
+            }
+        }
+
+        // Utility Functions
+        function copyKey(key) {
+            navigator.clipboard.writeText(key).then(() => {
+                showNotification('Key copied to clipboard!', 'success');
+            });
+        }
+
+        function searchKeys(query) {
+            const rows = document.querySelectorAll('#keysTableBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+            });
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function saveSettings() {
+            config.backendUrl = document.getElementById('backendUrl').value;
+            config.refreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
+            
+            localStorage.setItem('cpAdminConfig', JSON.stringify(config));
+            showNotification('Settings saved!', 'success');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('cpAdminConfig');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
+                document.getElementById('backendUrl').value = config.backendUrl;
+                document.getElementById('refreshInterval').value = config.refreshInterval / 1000;
+            }
+        }
+
+        // Key Management Functions
+        async function editKey(keyId) {
+            // TODO: Implement key editing modal
+            showNotification('Edit key functionality coming soon', 'warning');
+        }
+
+        async function deleteKey(keyId) {
+            if (!confirm('Are you sure you want to delete this key?')) return;
+            
+            try {
+                const response = await fetch(config.backendUrl + `/api/admin/delete-key/${keyId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('Key deleted successfully!', 'success');
+                    refreshData();
+                } else {
+                    showNotification('Failed to delete key', 'error');
+                }
+            } catch (error) {
+                showNotification('Error deleting key', 'error');
+            }
+        }
+
+        async function renewKey(keyId) {
+            // TODO: Implement key renewal
+            showNotification('Key renewal functionality coming soon', 'warning');
+        }
+
+        function viewOrder(orderId) {
+            // TODO: Implement order details modal
+            showNotification('Order details coming soon', 'warning');
+        }
+
+        function viewUser(email) {
+            // TODO: Implement user details modal
+            showNotification('User details coming soon', 'warning');
+        }
+    </script>
+</body>
+</html>
