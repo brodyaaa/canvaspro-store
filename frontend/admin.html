@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LearnLabs Admin Panel</title>
+    <title>LearnLabs Admin Panel - Secure</title>
     <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
     
     <style>
@@ -82,7 +82,7 @@
             font-weight: 500;
         }
 
-        .form-group input {
+        .form-group input, .form-select {
             width: 100%;
             padding: 12px 16px;
             background: var(--darker);
@@ -92,7 +92,7 @@
             font-size: 14px;
         }
 
-        .form-group input:focus {
+        .form-group input:focus, .form-select:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -110,9 +110,14 @@
             transition: all 0.3s;
         }
 
-        .login-btn:hover {
+        .login-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(255, 102, 51, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* Main Admin Panel */
@@ -244,10 +249,6 @@
             color: var(--red);
         }
 
-        .status-pending {
-            color: #f59e0b;
-        }
-
         /* Action Buttons */
         .btn {
             padding: 6px 12px;
@@ -262,7 +263,6 @@
         .btn-primary { background: var(--blue); color: white; }
         .btn-success { background: var(--green); color: white; }
         .btn-danger { background: var(--red); color: white; }
-        .btn-warning { background: #f59e0b; color: white; }
 
         .btn:hover {
             transform: translateY(-1px);
@@ -274,14 +274,6 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
-        }
-
-        .form-select {
-            padding: 8px 12px;
-            background: var(--darker);
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            color: white;
         }
 
         /* Key Display */
@@ -298,27 +290,6 @@
 
         .key-display:hover {
             background: #2a2a2a;
-        }
-
-        .device-info {
-            font-size: 11px;
-            color: #666;
-            font-family: monospace;
-        }
-
-        /* Search */
-        .search-container {
-            margin-bottom: 20px;
-        }
-
-        .search-input {
-            width: 100%;
-            max-width: 400px;
-            padding: 10px 16px;
-            background: var(--darker);
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: white;
         }
 
         /* Notifications */
@@ -340,6 +311,26 @@
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
+        }
+
+        .security-notice {
+            background: rgba(255, 102, 51, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #ffa366;
+        }
+
+        .token-display {
+            background: var(--darker);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            word-break: break-all;
+            margin-top: 8px;
         }
 
         /* Responsive */
@@ -365,18 +356,22 @@
     <div class="login-container" id="loginScreen">
         <div class="login-box">
             <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="login-logo">
-            <h1 class="login-title">LearnLabs Admin</h1>
+            <h1 class="login-title">LearnLabs Admin - Secure</h1>
+            
+            <div class="security-notice">
+                🔒 This panel now uses JWT authentication for enhanced security
+            </div>
             
             <form id="loginForm">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="username" required>
+                    <input type="text" id="username" required autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="password" required>
+                    <input type="password" id="password" required autocomplete="current-password">
                 </div>
-                <button type="submit" class="login-btn">Login</button>
+                <button type="submit" class="login-btn" id="loginBtn">Login</button>
             </form>
         </div>
     </div>
@@ -406,21 +401,23 @@
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
 
+        <!-- Security Notice -->
+        <div class="security-notice" id="tokenInfo" style="display: none;">
+            <strong>🔐 JWT Token Active</strong>
+            <div>Expires: <span id="tokenExpiry"></span></div>
+            <div class="token-display" id="tokenDisplay"></div>
+        </div>
+
         <!-- Tabs -->
         <div class="admin-tabs">
             <button class="tab-btn active" onclick="showTab('keys')">🔑 Keys</button>
             <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
-            <button class="tab-btn" onclick="showTab('users')">👥 Users</button>
             <button class="tab-btn" onclick="showTab('generate')">➕ Generate</button>
             <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
         </div>
 
         <!-- Keys Tab -->
         <div class="tab-content active" id="keysTab">
-            <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search keys..." onkeyup="searchKeys(this.value)">
-            </div>
-            
             <div class="table-container">
                 <table id="keysTable">
                     <thead>
@@ -453,31 +450,10 @@
                             <th>Amount</th>
                             <th>Date</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
                         <!-- Orders will be loaded here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Users Tab -->
-        <div class="tab-content" id="usersTab">
-            <div class="table-container">
-                <table id="usersTable">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Keys</th>
-                            <th>Total Spent</th>
-                            <th>Last Active</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                        <!-- Users will be loaded here -->
                     </tbody>
                 </table>
             </div>
@@ -535,7 +511,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Backend URL</label>
-                    <input type="url" id="backendUrl" value="https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev">
+                    <input type="url" id="backendUrl" value="">
                 </div>
                 <div class="form-group">
                     <label>Auto-refresh interval (seconds)</label>
@@ -544,37 +520,76 @@
             </div>
 
             <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-            <button class="btn btn-warning" onclick="refreshData()">Refresh All Data</button>
+            <button class="btn btn-success" onclick="refreshData()">Refresh All Data</button>
         </div>
     </div>
 
     <script>
-        // Configuration
+        // ============================================
+        // SECURE ADMIN PANEL SCRIPT
+        // ============================================
+        
+        // Configuration - NO HARDCODED URLS OR CREDENTIALS!
         let config = {
-            backendUrl: window.location.hostname === 'localhost' 
-                ? 'http://localhost:3000' 
-                : 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',
+            backendUrl: '', 
             refreshInterval: 30000,
-            isLoggedIn: false
+            isLoggedIn: false,
+            jwtToken: null,
+            tokenExpiry: null
         };
+
+        // Determine backend URL based on environment
+        function getBackendUrl() {
+            // Check if we're on localhost
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+            
+            // Check if backend URL is stored
+            const stored = localStorage.getItem('cpAdminBackendUrl');
+            if (stored) {
+                return stored;
+            }
+            
+            // Prompt for backend URL if not set
+            const url = prompt('Enter your backend URL (e.g., https://your-app.replit.dev):');
+            if (url) {
+                localStorage.setItem('cpAdminBackendUrl', url);
+                return url;
+            }
+            
+            return '';
+        }
 
         // Data storage
         let keysData = [];
         let ordersData = [];
-        let usersData = [];
-        let adminCredentials = null;
+        let refreshInterval = null;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Set backend URL
+            config.backendUrl = getBackendUrl();
+            document.getElementById('backendUrl').value = config.backendUrl;
+            
             // Check if already logged in
-            const storedCreds = localStorage.getItem('cpAdminCreds');
-            if (storedCreds) {
-                adminCredentials = storedCreds;
-                // Test the stored credentials
-                testStoredCredentials();
+            const storedToken = sessionStorage.getItem('cpAdminToken');
+            const storedExpiry = sessionStorage.getItem('cpAdminTokenExpiry');
+            
+            if (storedToken && storedExpiry) {
+                const expiryTime = new Date(storedExpiry);
+                if (expiryTime > new Date()) {
+                    config.jwtToken = storedToken;
+                    config.tokenExpiry = expiryTime;
+                    showAdminPanel();
+                } else {
+                    // Token expired
+                    sessionStorage.removeItem('cpAdminToken');
+                    sessionStorage.removeItem('cpAdminTokenExpiry');
+                }
             }
 
-            // Setup login form
+            // Setup forms
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
             document.getElementById('generateForm').addEventListener('submit', handleGenerate);
 
@@ -582,74 +597,67 @@
             loadSettings();
         });
 
-        // Test stored credentials
-        async function testStoredCredentials() {
-            try {
-                const response = await fetch(`${config.backendUrl}/api/admin/stats`, {
-                    headers: {
-                        'Authorization': `Basic ${adminCredentials}`
-                    }
-                });
-                
-                if (response.ok) {
-                    // Credentials are valid
-                    showAdminPanel();
-                } else {
-                    // Credentials are invalid, clear them
-                    localStorage.removeItem('cpAdminCreds');
-                    adminCredentials = null;
-                }
-            } catch (error) {
-                console.error('Error testing credentials:', error);
-            }
-        }
-
-        // Authentication
-        function handleLogin(e) {
+        // Authentication with JWT
+        async function handleLogin(e) {
             e.preventDefault();
+            
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
-            // Create Basic Auth credentials
-            const credentials = btoa(`${username}:${password}`);
-            adminCredentials = credentials;
             
-            // Test the credentials immediately
-            testLoginCredentials(credentials, username);
-        }
-
-        async function testLoginCredentials(credentials, username) {
             try {
-                const response = await fetch(`${config.backendUrl}/api/admin/stats`, {
+                const response = await fetch(`${config.backendUrl}/api/admin/login`, {
+                    method: 'POST',
                     headers: {
-                        'Authorization': `Basic ${credentials}`
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
                 });
                 
-                if (response.ok) {
-                    // Save credentials
-                    localStorage.setItem('cpAdminCreds', credentials);
-                    localStorage.setItem('cpAdminUser', username);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Store JWT token
+                    config.jwtToken = data.token;
+                    config.tokenExpiry = new Date(Date.now() + (4 * 60 * 60 * 1000)); // 4 hours
+                    
+                    sessionStorage.setItem('cpAdminToken', data.token);
+                    sessionStorage.setItem('cpAdminTokenExpiry', config.tokenExpiry.toISOString());
+                    
+                    // Clear password from memory
+                    document.getElementById('password').value = '';
                     
                     showAdminPanel();
                     showNotification('Login successful!', 'success');
                 } else {
-                    showNotification('Invalid credentials!', 'error');
-                    adminCredentials = null;
+                    showNotification(data.error || 'Invalid credentials!', 'error');
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showNotification('Connection error. Check if backend is running.', 'error');
+                showNotification('Connection error. Check backend URL.', 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
             }
         }
 
         function logout() {
-            localStorage.removeItem('cpAdminCreds');
-            localStorage.removeItem('cpAdminUser');
-            adminCredentials = null;
+            sessionStorage.removeItem('cpAdminToken');
+            sessionStorage.removeItem('cpAdminTokenExpiry');
+            config.jwtToken = null;
+            config.tokenExpiry = null;
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('adminPanel').style.display = 'none';
             config.isLoggedIn = false;
+            
+            // Clear refresh interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
         }
 
         function showAdminPanel() {
@@ -657,11 +665,21 @@
             document.getElementById('adminPanel').style.display = 'block';
             config.isLoggedIn = true;
             
+            // Show token info
+            if (config.tokenExpiry) {
+                document.getElementById('tokenInfo').style.display = 'block';
+                document.getElementById('tokenExpiry').textContent = config.tokenExpiry.toLocaleString();
+                document.getElementById('tokenDisplay').textContent = config.jwtToken.substring(0, 50) + '...';
+            }
+            
             // Load initial data
             refreshData();
             
-            // Setup auto-refresh
-            setInterval(refreshData, config.refreshInterval);
+            // Setup auto-refresh with proper cleanup
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            refreshInterval = setInterval(refreshData, config.refreshInterval);
         }
 
         // Tab Management
@@ -682,16 +700,12 @@
                 case 'orders':
                     loadOrders();
                     break;
-                case 'users':
-                    loadUsers();
-                    break;
             }
         }
 
-        // Data Loading Functions
+        // Data Loading Functions with JWT
         async function refreshData() {
-            if (!adminCredentials) {
-                console.log('No admin credentials stored');
+            if (!config.jwtToken || !config.backendUrl) {
                 return;
             }
 
@@ -719,30 +733,28 @@
                     const tabId = activeTab.id;
                     if (tabId === 'keysTab') loadKeys();
                     else if (tabId === 'ordersTab') loadOrders();
-                    else if (tabId === 'usersTab') loadUsers();
                 }
 
             } catch (error) {
                 console.error('Error refreshing data:', error);
-                showNotification('Error loading data', 'error');
             }
         }
 
         async function fetchData(endpoint) {
-            if (!adminCredentials) {
-                throw new Error('No admin credentials');
+            if (!config.jwtToken || !config.backendUrl) {
+                throw new Error('Not configured');
             }
 
             try {
                 const response = await fetch(config.backendUrl + endpoint, {
                     headers: {
-                        'Authorization': `Basic ${adminCredentials}`,
+                        'Authorization': `Bearer ${config.jwtToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
                 
                 if (response.status === 401) {
-                    showNotification('Admin session expired, please login again', 'error');
+                    showNotification('Session expired, please login again', 'error');
                     logout();
                     return null;
                 }
@@ -766,13 +778,16 @@
                 const status = new Date(key.expires_at) < new Date() ? 'expired' : 'active';
                 const statusClass = status === 'active' ? 'status-active' : 'status-expired';
 
+                // Sanitize display
+                const safeEmail = (key.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safePlan = (key.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
                 row.innerHTML = `
                     <td>
                         <div class="key-display" onclick="copyKey('${key.key_display || 'HIDDEN'}')">${key.key_display || 'HIDDEN'}</div>
-                        ${key.device_count ? `<div class="device-info">Devices: ${key.device_count}</div>` : ''}
                     </td>
-                    <td>${key.email || 'N/A'}</td>
-                    <td><span class="badge">${key.plan}</span></td>
+                    <td>${safeEmail}</td>
+                    <td>${safePlan}</td>
                     <td><span class="${statusClass}">${status.toUpperCase()}</span></td>
                     <td>${key.device_count || 0}/2</td>
                     <td>${new Date(key.expires_at).toLocaleDateString()}</td>
@@ -790,63 +805,29 @@
 
             ordersData.forEach(order => {
                 const row = document.createElement('tr');
+                
+                // Sanitize display
+                const safeEmail = (order.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safePlan = (order.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
                 row.innerHTML = `
                     <td>${order.order_number}</td>
-                    <td>${order.email}</td>
-                    <td>${order.plan}</td>
-                    <td>$${order.amount}</td>
+                    <td>${safeEmail}</td>
+                    <td>${safePlan}</td>
+                    <td>$${order.amount || 0}</td>
                     <td>${new Date(order.created_at).toLocaleDateString()}</td>
                     <td><span class="status-active">COMPLETED</span></td>
-                    <td>
-                        <button class="btn btn-primary" onclick="viewOrder('${order.id}')">View</button>
-                    </td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
-        function loadUsers() {
-            // Group keys by email to create user data
-            const userMap = {};
-            keysData.forEach(key => {
-                if (key.email) {
-                    if (!userMap[key.email]) {
-                        userMap[key.email] = {
-                            email: key.email,
-                            keys: 0,
-                            totalSpent: 0,
-                            lastActive: key.last_device_use || 'Never'
-                        };
-                    }
-                    userMap[key.email].keys++;
-                    userMap[key.email].totalSpent += key.price || 0;
-                }
-            });
-
-            const tbody = document.getElementById('usersTableBody');
-            tbody.innerHTML = '';
-
-            Object.values(userMap).forEach(user => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${user.email}</td>
-                    <td>${user.keys}</td>
-                    <td>$${user.totalSpent.toFixed(2)}</td>
-                    <td>${user.lastActive}</td>
-                    <td>
-                        <button class="btn btn-primary" onclick="viewUser('${user.email}')">View</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Key Generation
+        // Key Generation with JWT
         async function handleGenerate(e) {
             e.preventDefault();
             
-            if (!adminCredentials) {
-                showNotification('Please login first', 'error');
+            if (!config.jwtToken || !config.backendUrl) {
+                showNotification('Please configure backend and login', 'error');
                 return;
             }
             
@@ -860,7 +841,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Basic ${adminCredentials}`
+                        'Authorization': `Bearer ${config.jwtToken}`
                     },
                     body: JSON.stringify({
                         email,
@@ -871,7 +852,7 @@
                 });
 
                 if (response.status === 401) {
-                    showNotification('Admin authentication failed, please login again', 'error');
+                    showNotification('Session expired, please login again', 'error');
                     logout();
                     return;
                 }
@@ -883,13 +864,13 @@
                     document.getElementById('generatedKey').style.display = 'block';
                     document.getElementById('generateForm').reset();
                     showNotification('Key generated successfully!', 'success');
-                    refreshData(); // Refresh data to show new key
+                    refreshData();
                 } else {
                     showNotification(result.error || 'Failed to generate key', 'error');
                 }
             } catch (error) {
                 console.error('Generate key error:', error);
-                showNotification('Error generating key: ' + error.message, 'error');
+                showNotification('Error generating key', 'error');
             }
         }
 
@@ -897,14 +878,8 @@
         function copyKey(key) {
             navigator.clipboard.writeText(key).then(() => {
                 showNotification('Key copied to clipboard!', 'success');
-            });
-        }
-
-        function searchKeys(query) {
-            const rows = document.querySelectorAll('#keysTableBody tr');
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+            }).catch(() => {
+                showNotification('Failed to copy key', 'error');
             });
         }
 
@@ -921,28 +896,47 @@
         }
 
         function saveSettings() {
-            config.backendUrl = document.getElementById('backendUrl').value;
-            config.refreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
+            const newBackendUrl = document.getElementById('backendUrl').value;
+            const newRefreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
             
-            localStorage.setItem('cpAdminConfig', JSON.stringify(config));
+            if (newBackendUrl) {
+                config.backendUrl = newBackendUrl;
+                localStorage.setItem('cpAdminBackendUrl', newBackendUrl);
+            }
+            
+            config.refreshInterval = newRefreshInterval;
+            localStorage.setItem('cpAdminRefreshInterval', newRefreshInterval);
+            
+            // Reset refresh interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = setInterval(refreshData, config.refreshInterval);
+            }
+            
             showNotification('Settings saved!', 'success');
         }
 
         function loadSettings() {
-            const saved = localStorage.getItem('cpAdminConfig');
-            if (saved) {
-                config = { ...config, ...JSON.parse(saved) };
-                document.getElementById('backendUrl').value = config.backendUrl;
+            const savedUrl = localStorage.getItem('cpAdminBackendUrl');
+            const savedInterval = localStorage.getItem('cpAdminRefreshInterval');
+            
+            if (savedUrl) {
+                config.backendUrl = savedUrl;
+                document.getElementById('backendUrl').value = savedUrl;
+            }
+            
+            if (savedInterval) {
+                config.refreshInterval = parseInt(savedInterval);
                 document.getElementById('refreshInterval').value = config.refreshInterval / 1000;
             }
         }
 
-        // Key Management Functions
+        // Key Management Functions with JWT
         async function deleteKey(keyId) {
             if (!confirm('Are you sure you want to delete this key?')) return;
             
-            if (!adminCredentials) {
-                showNotification('Please login first', 'error');
+            if (!config.jwtToken || !config.backendUrl) {
+                showNotification('Not configured', 'error');
                 return;
             }
             
@@ -950,12 +944,12 @@
                 const response = await fetch(config.backendUrl + `/api/admin/delete-key/${keyId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Basic ${adminCredentials}`
+                        'Authorization': `Bearer ${config.jwtToken}`
                     }
                 });
                 
                 if (response.status === 401) {
-                    showNotification('Admin authentication failed, please login again', 'error');
+                    showNotification('Session expired', 'error');
                     logout();
                     return;
                 }
@@ -968,17 +962,16 @@
                     showNotification(error.error || 'Failed to delete key', 'error');
                 }
             } catch (error) {
-                showNotification('Error deleting key: ' + error.message, 'error');
+                showNotification('Error deleting key', 'error');
             }
         }
 
-        function viewOrder(orderId) {
-            showNotification('Order details coming soon', 'warning');
-        }
-
-        function viewUser(email) {
-            showNotification('User details coming soon', 'warning');
-        }
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
     </script>
 </body>
 </html>
