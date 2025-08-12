@@ -1,21 +1,56 @@
-// server.js - Complete Enhanced CanvasPro Backend with ALL endpoints - FIXED VERSION
+// server.js - SECURE VERSION FOR GITHUB - NO HARDCODED SECRETS
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const PORT = process.env.PORT || 3000;  // Use 3000 as fallback, not 0
+const PORT = process.env.PORT || 3000;
 
 console.log('🚀 Starting Enhanced CanvasPro Backend...');
+
+// ALL CONFIGURATION FROM ENVIRONMENT VARIABLES - NO HARDCODED SECRETS
+const CONFIG = {
+    // Admin credentials - MUST be set in environment variables
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    
+    // API Keys - MUST be set in environment variables
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    
+    // Security keys - MUST be set in environment variables
+    KEY_ENCRYPTION_SECRET: process.env.KEY_ENCRYPTION_SECRET,
+    
+    // Optional configuration with safe defaults
+    ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean)
+};
+
+// Check for required environment variables
+const requiredEnvVars = ['ADMIN_USERNAME', 'ADMIN_PASSWORD', 'KEY_ENCRYPTION_SECRET'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+    console.error('❌ CRITICAL: Missing required environment variables:');
+    missingVars.forEach(varName => console.error(`   - ${varName}`));
+    console.error('\nPlease set these in your hosting environment (Replit Secrets, etc.)');
+    console.error('Never commit credentials to GitHub!');
+    
+    // Only exit in production
+    if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+    }
+}
 
 // Initialize services
 let stripe = null;
 let resend = null;
 
 try {
-    if (process.env.STRIPE_SECRET_KEY) {
-        stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    if (CONFIG.STRIPE_SECRET_KEY) {
+        stripe = require('stripe')(CONFIG.STRIPE_SECRET_KEY);
         console.log('✅ Stripe initialized');
     } else {
         console.log('⚠️ Running in test mode - no Stripe key');
@@ -25,9 +60,9 @@ try {
 }
 
 try {
-    if (process.env.RESEND_API_KEY) {
+    if (CONFIG.RESEND_API_KEY) {
         const { Resend } = require('resend');
-        resend = new Resend(process.env.RESEND_API_KEY);
+        resend = new Resend(CONFIG.RESEND_API_KEY);
         console.log('✅ Resend initialized');
     } else {
         console.log('⚠️ Email disabled - no Resend key');
@@ -38,23 +73,32 @@ try {
 
 // Enhanced Security Configuration
 const SECURITY = {
-    // Admin users (change these!)
-    admins: {
-        'admin': process.env.ADMIN_PASSWORD || 'CanvasPro2024!',
-        'brodypeeler': process.env.BRODY_PASSWORD || 'BrodyAdmin123!'
-    },
-
+    // Admin users - NOW FROM ENVIRONMENT VARIABLES ONLY
+    admins: {},
+    
     // Device binding settings
-    maxDevicesPerKey: 2, // Allow key on max 2 devices
+    maxDevicesPerKey: 2,
     deviceBindingEnabled: true,
-
+    
     // Rate limiting
     maxValidationAttempts: 10,
     validationWindow: 3600000, // 1 hour
-
-    // Key obfuscation
-    keyEncryptionSecret: process.env.KEY_ENCRYPTION_SECRET || 'your-secret-key-here-change-this'
 };
+
+// Set up admin users from environment variables
+if (CONFIG.ADMIN_USERNAME && CONFIG.ADMIN_PASSWORD) {
+    SECURITY.admins[CONFIG.ADMIN_USERNAME] = CONFIG.ADMIN_PASSWORD;
+}
+
+// Additional admin users can be added via environment variables
+// Format: ADMIN_USER_2=username2, ADMIN_PASS_2=password2
+for (let i = 2; i <= 5; i++) {
+    const username = process.env[`ADMIN_USER_${i}`];
+    const password = process.env[`ADMIN_PASS_${i}`];
+    if (username && password) {
+        SECURITY.admins[username] = password;
+    }
+}
 
 // Middleware - Order matters!
 // First, handle raw body for webhook
@@ -63,7 +107,14 @@ app.use('/api/webhook', express.raw({ type: 'application/json' }));
 // Then handle CORS
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow all origins for now
+        // Check against allowed origins if configured
+        if (CONFIG.ALLOWED_ORIGINS.length > 0) {
+            if (!origin || CONFIG.ALLOWED_ORIGINS.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        }
+        // Default: allow all origins (configure ALLOWED_ORIGINS in production!)
         return callback(null, true);
     },
     credentials: true,
@@ -166,9 +217,14 @@ db.serialize(() => {
 
 // Fixed Encryption helpers using createCipheriv
 function encryptKey(key) {
+    if (!CONFIG.KEY_ENCRYPTION_SECRET) {
+        console.warn('⚠️ KEY_ENCRYPTION_SECRET not set, using fallback encryption');
+        return crypto.createHash('sha256').update(key).digest('hex');
+    }
+    
     try {
         const algorithm = 'aes-256-cbc';
-        const password = SECURITY.keyEncryptionSecret;
+        const password = CONFIG.KEY_ENCRYPTION_SECRET;
         
         // Create a proper key and IV from the password
         const keyHash = crypto.createHash('sha256').update(password).digest();
@@ -187,9 +243,14 @@ function encryptKey(key) {
 }
 
 function decryptKey(encryptedKey) {
+    if (!CONFIG.KEY_ENCRYPTION_SECRET) {
+        console.warn('⚠️ KEY_ENCRYPTION_SECRET not set, cannot decrypt');
+        return null;
+    }
+    
     try {
         const algorithm = 'aes-256-cbc';
-        const password = SECURITY.keyEncryptionSecret;
+        const password = CONFIG.KEY_ENCRYPTION_SECRET;
         
         // Create a proper key and IV from the password
         const keyHash = crypto.createHash('sha256').update(password).digest();
@@ -250,6 +311,14 @@ async function checkRateLimit(identifier) {
 // Admin authentication middleware
 function requireAdmin(req, res, next) {
     const authHeader = req.headers.authorization;
+    
+    // Check if admin users are configured
+    if (Object.keys(SECURITY.admins).length === 0) {
+        return res.status(503).json({ 
+            error: 'Admin panel not configured. Please set ADMIN_USERNAME and ADMIN_PASSWORD environment variables.' 
+        });
+    }
+    
     if (!authHeader || !authHeader.startsWith('Basic ')) {
         return res.status(401).json({ error: 'Admin authentication required' });
     }
@@ -375,6 +444,11 @@ app.get('/', (req, res) => {
         stripe: stripe ? 'configured' : 'test mode',
         email: resend ? 'configured' : 'disabled',
         timestamp: new Date().toISOString(),
+        configStatus: {
+            adminConfigured: Object.keys(SECURITY.admins).length > 0,
+            stripeConfigured: !!stripe,
+            emailConfigured: !!resend
+        },
         endpoints: {
             config: '/api/config',
             checkout: '/api/create-checkout',
@@ -399,8 +473,8 @@ app.get('/api/health', (req, res) => {
 
 app.get('/api/config', (req, res) => {
     res.json({ 
-        stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
-        testMode: !process.env.STRIPE_SECRET_KEY,
+        stripePublishableKey: CONFIG.STRIPE_PUBLISHABLE_KEY || '',
+        testMode: !CONFIG.STRIPE_SECRET_KEY,
         deviceBinding: SECURITY.deviceBindingEnabled,
         maxDevices: SECURITY.maxDevicesPerKey
     });
@@ -655,7 +729,7 @@ app.post('/api/webhook', async (req, res) => {
         event = stripe.webhooks.constructEvent(
             req.body,
             sig,
-            process.env.STRIPE_WEBHOOK_SECRET
+            CONFIG.STRIPE_WEBHOOK_SECRET
         );
     } catch (err) {
         console.error('❌ Webhook signature verification failed:', err.message);
@@ -1006,7 +1080,7 @@ app.delete('/api/admin/delete-key/:keyId', requireAdmin, (req, res) => {
     );
 });
 
-// Start server - FIXED FOR REPLIT
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Enhanced CanvasPro Backend running on port ${PORT}`);
     console.log(`📍 Health: http://0.0.0.0:${PORT}/`);
@@ -1014,6 +1088,17 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📧 Email: ${resend ? 'Enabled ✅' : 'Disabled ⚠️'}`);
     console.log(`🔒 Device Binding: ${SECURITY.deviceBindingEnabled ? 'Enabled' : 'Disabled'}`);
     console.log(`👥 Max Devices: ${SECURITY.maxDevicesPerKey}`);
-    console.log(`👨‍💼 Admin Users: ${Object.keys(SECURITY.admins).join(', ')}`);
-    console.log('✅ All endpoints ready including admin endpoints!');
+    
+    if (Object.keys(SECURITY.admins).length > 0) {
+        console.log(`👨‍💼 Admin Panel: Configured ✅`);
+    } else {
+        console.log(`⚠️ Admin Panel: Not configured - Set ADMIN_USERNAME and ADMIN_PASSWORD in environment`);
+    }
+    
+    console.log('\n⚠️ SECURITY REMINDER:');
+    console.log('   Never commit passwords or API keys to GitHub!');
+    console.log('   All sensitive data should be in environment variables.');
+    console.log('   This is the SAFE version for GitHub.\n');
+    
+    console.log('✅ All endpoints ready!');
 });
