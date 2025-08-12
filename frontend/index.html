@@ -3,13 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LearnLabs - Premium Canvas Automation Tools</title>
-    
-    <!-- Favicon -->
+    <title>LearnLabs Admin Panel</title>
     <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
-    
-    <!-- Stripe -->
-    <script src="https://js.stripe.com/v3/"></script>
     
     <style>
         * {
@@ -25,6 +20,8 @@
             --darker: #0f0f0f;
             --purple: #6b46c1;
             --blue: #3b82f6;
+            --green: #10b981;
+            --red: #ef4444;
         }
 
         body {
@@ -37,843 +34,1020 @@
                 radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
         }
 
-        /* Navigation */
-        nav {
-            background: rgba(26, 26, 26, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #2a2a2a;
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
+        /* Login Screen */
+        .login-container {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
 
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            text-decoration: none;
-        }
-
-        .nav-logo img {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: #999;
-            text-decoration: none;
-            transition: color 0.3s;
-            font-weight: 500;
-        }
-
-        .nav-links a:hover {
-            color: white;
-        }
-
-        .discord-btn {
-            background: #5865F2;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-        }
-
-        .discord-btn:hover {
-            background: #4752C4;
-            transform: translateY(-2px);
-        }
-
-        /* Hero Section */
-        .hero {
-            padding: 6rem 2rem;
+        .login-box {
+            background: var(--dark);
+            border: 2px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
             text-align: center;
-            max-width: 1400px;
-            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #ff6633 0%, #6b46c1 50%, #3b82f6 100%);
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 12px;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .hero p {
-            font-size: 1.25rem;
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
             color: #888;
-            max-width: 600px;
-            margin: 0 auto;
+            font-weight: 500;
         }
 
-        /* Products Grid */
-        .products-section {
-            padding: 4rem 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
-
-        .product-card {
-            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-            border: 2px solid #2a2a2a;
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.3s;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-
-        .product-card.coming-soon {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .product-card.coming-soon::after {
-            content: 'COMING SOON';
-            position: absolute;
-            top: 20px;
-            right: -30px;
-            background: var(--purple);
-            color: white;
-            padding: 5px 40px;
-            transform: rotate(45deg);
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-
-        .product-header {
-            height: 200px;
-            background: linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .product-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
-            animation: slide 20s linear infinite;
-        }
-
-        @keyframes slide {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-
-        .product-logo {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .product-logo img {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-        }
-
-        .product-body {
-            padding: 2rem;
-        }
-
-        .product-name {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .product-description {
-            color: #888;
-            margin-bottom: 1.5rem;
-        }
-
-        .product-price {
-            font-size: 2rem;
-            color: var(--primary);
-            margin-bottom: 1.5rem;
-        }
-
-        .product-btn {
+        .form-group input, .form-select {
             width: 100%;
-            padding: 1rem;
+            padding: 12px 16px;
+            background: var(--darker);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .product-btn:hover:not(:disabled) {
-            transform: scale(1.05);
+        .login-btn:hover {
+            transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(255, 102, 51, 0.4);
         }
 
-        .product-btn:disabled {
-            background: #444;
-            cursor: not-allowed;
-        }
-
-        /* Modal */
-        .modal {
+        /* Main Admin Panel */
+        .admin-container {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.9);
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
+        .admin-header {
             background: var(--dark);
-            padding: 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .close-btn {
-            float: right;
-            background: none;
-            border: none;
-            color: #888;
+        .admin-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             font-size: 1.5rem;
-            cursor: pointer;
+            font-weight: 600;
         }
 
-        .close-btn:hover {
-            color: white;
+        .admin-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
         }
 
-        .form-group {
-            margin-bottom: 1.5rem;
+        .admin-stats {
+            display: flex;
+            gap: 20px;
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
             color: #888;
         }
 
-        .form-group input, .form-group select {
+        .logout-btn {
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Tabs */
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: var(--darker);
+            color: #888;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--dark);
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
             width: 100%;
-            padding: 0.75rem;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        th {
+            background: var(--darker);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .status-active {
+            color: var(--green);
+        }
+
+        .status-expired {
+            color: var(--red);
+        }
+
+        /* Action Buttons */
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: var(--blue); color: white; }
+        .btn-success { background: var(--green); color: white; }
+        .btn-danger { background: var(--red); color: white; }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Forms */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        /* Key Display */
+        .key-display {
+            font-family: 'Courier New', monospace;
+            background: var(--darker);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #2a2a2a;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .key-display:hover {
+            background: #2a2a2a;
+        }
+
+        .device-info {
+            font-size: 11px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        /* Search */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 16px;
             background: var(--darker);
             border: 1px solid #2a2a2a;
             border-radius: 8px;
             color: white;
         }
 
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        /* Pricing Options */
-        .pricing-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .price-option {
-            padding: 1rem;
-            background: var(--darker);
-            border: 2px solid #2a2a2a;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-        }
-
-        .price-option:hover {
-            border-color: var(--primary);
-        }
-
-        .price-option.selected {
-            border-color: var(--primary);
-            background: rgba(255, 102, 51, 0.1);
-        }
-
-        .price-option .plan-name {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .price-option .plan-price {
-            color: var(--primary);
-            font-size: 1.5rem;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .spinner {
-            border: 3px solid #2a2a2a;
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #888;
-            border-top: 1px solid #2a2a2a;
-            margin-top: 4rem;
-        }
-
-        /* Client Area Button */
-        .client-area-btn {
-            background: linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .client-area-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(107, 70, 193, 0.4);
-        }
-
-        /* Status indicator */
-        .status-indicator {
+        /* Notifications */
+        .notification {
             position: fixed;
-            bottom: 20px;
+            top: 20px;
             right: 20px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
             z-index: 1000;
+            animation: slideIn 0.3s ease;
         }
 
-        .status-live {
-            background: #10b981;
-            color: white;
+        .notification.success { background: var(--green); }
+        .notification.error { background: var(--red); }
+        .notification.warning { background: #f59e0b; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
-        .status-test {
-            background: #f59e0b;
-            color: white;
-        }
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                gap: 15px;
+            }
 
-        .status-error {
-            background: #ef4444;
-            color: white;
+            .admin-stats {
+                width: 100%;
+                justify-content: space-around;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Status Indicator -->
-    <div id="statusIndicator" class="status-indicator status-error">Connecting...</div>
-
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <a href="/" class="nav-logo">
-                <img src="https://i.imgur.com/OozsIMD.png" alt="Logo">
-                LearnLabs
-            </a>
-            <ul class="nav-links">
-                <li><a href="#products">Products</a></li>
-                <li><a href="#" onclick="openClientArea(); return false;" class="client-area-btn">Client Area</a></li>
-                <li><a href="https://discord.gg/JfecsrHqC6" target="_blank" class="discord-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
-                    </svg>
-                    Discord
-                </a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <h1>Premium Automation Tools</h1>
-        <p>Save time, boost productivity, and dominate your courses with our suite of professional automation tools.</p>
-    </section>
-
-    <!-- Products Section -->
-    <section class="products-section" id="products">
-        <h2 class="section-title">Our Products</h2>
-        <div class="products-grid">
-            <!-- CanvasPro -->
-            <div class="product-card" onclick="openProductModal('canvaspro')">
-                <div class="product-header" style="background: linear-gradient(135deg, #ff6633 0%, #ff8855 100%);">
-                    <div class="product-logo">
-                        <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro">
-                    </div>
-                </div>
-                <div class="product-body">
-                    <h3 class="product-name">CanvasPro</h3>
-                    <p class="product-description">Complete Canvas LMS automation. Auto-advance, smart answers, and more.</p>
-                    <div class="product-price">From $3/day</div>
-                    <button class="product-btn">View Plans</button>
-                </div>
-            </div>
-
-            <!-- EdmentumPro -->
-            <div class="product-card coming-soon">
-                <div class="product-header" style="background: linear-gradient(135deg, #6b46c1 0%, #9333ea 100%);">
-                    <div class="product-logo">
-                        <img src="https://i.imgur.com/OozsIMD.png" alt="EdmentumPro">
-                    </div>
-                </div>
-                <div class="product-body">
-                    <h3 class="product-name">EdmentumPro</h3>
-                    <p class="product-description">Edmentum & Plato automation. Complete assignments effortlessly.</p>
-                    <div class="product-price">Coming Soon</div>
-                    <button class="product-btn" disabled>Coming Soon</button>
-                </div>
-            </div>
-
-            <!-- ApexPro -->
-            <div class="product-card coming-soon">
-                <div class="product-header" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
-                    <div class="product-logo">
-                        <img src="https://i.imgur.com/OozsIMD.png" alt="ApexPro">
-                    </div>
-                </div>
-                <div class="product-body">
-                    <h3 class="product-name">ApexPro</h3>
-                    <p class="product-description">Apex Learning automation suite. Master your courses faster.</p>
-                    <div class="product-price">Coming Soon</div>
-                    <button class="product-btn" disabled>Coming Soon</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Purchase Modal -->
-    <div class="modal" id="purchaseModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal('purchaseModal')">&times;</button>
-            <h2 id="modalTitle">Select Your Plan</h2>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="login-logo">
+            <h1 class="login-title">LearnLabs Admin</h1>
             
-            <div class="pricing-options" id="pricingOptions">
-                <div class="price-option" onclick="selectPlan('test', 1.00)" style="background: #2a2a2a;">
-                    <div class="plan-name">TEST</div>
-                    <div class="plan-price">$1</div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required autocomplete="username">
                 </div>
-                <div class="price-option" onclick="selectPlan('daily', 3.00)">
-                    <div class="plan-name">Daily</div>
-                    <div class="plan-price">$3</div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required autocomplete="current-password">
                 </div>
-                <div class="price-option selected" onclick="selectPlan('weekly', 13.00)">
-                    <div class="plan-name">Weekly</div>
-                    <div class="plan-price">$13</div>
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-container" id="adminPanel">
+        <!-- Header -->
+        <div class="admin-header">
+            <div class="admin-title">
+                <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="admin-logo">
+                LearnLabs Admin Panel
+            </div>
+            <div class="admin-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalKeys">0</div>
+                    <div class="stat-label">Total Keys</div>
                 </div>
-                <div class="price-option" onclick="selectPlan('monthly', 30.00)">
-                    <div class="plan-name">Monthly</div>
-                    <div class="plan-price">$30</div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeKeys">0</div>
+                    <div class="stat-label">Active</div>
                 </div>
-                <div class="price-option" onclick="selectPlan('yearly', 100.00)">
-                    <div class="plan-name">Yearly</div>
-                    <div class="plan-price">$100</div>
-                </div>
-                <div class="price-option" onclick="selectPlan('lifetime', 275.00)">
-                    <div class="plan-name">Lifetime</div>
-                    <div class="plan-price">$275</div>
+                <div class="stat-item">
+                    <div class="stat-value" id="todayRevenue">$0</div>
+                    <div class="stat-label">Today Revenue</div>
                 </div>
             </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
 
-            <div id="checkoutForm">
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="email" placeholder="your@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Payment Method</label>
-                    <select id="paymentMethod" onchange="togglePaymentMethod()">
-                        <option value="stripe">Credit/Debit Card (Stripe)</option>
-                        <option value="crypto">Cryptocurrency</option>
-                    </select>
-                </div>
-                <div id="cryptoInfo" style="display: none;">
-                    <div style="background: var(--darker); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                        <p style="color: #888; margin-bottom: 1rem;">Select cryptocurrency:</p>
-                        <select id="cryptoType" onchange="updateCryptoAddress()" style="width: 100%; padding: 0.75rem; background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 8px; color: white; margin-bottom: 1rem;">
-                            <option value="btc">Bitcoin (BTC)</option>
-                            <option value="eth">Ethereum (ETH)</option>
-                            <option value="sol">Solana (SOL)</option>
-                            <option value="base">Base</option>
-                            <option value="polygon">Polygon</option>
-                            <option value="monad">Monad</option>
-                            <option value="sui">Sui</option>
+        <!-- Tabs -->
+        <div class="admin-tabs">
+            <button class="tab-btn active" onclick="showTab('keys')">🔑 Keys</button>
+            <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
+            <button class="tab-btn" onclick="showTab('users')">👥 Users</button>
+            <button class="tab-btn" onclick="showTab('generate')">➕ Generate</button>
+            <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
+        </div>
+
+        <!-- Keys Tab -->
+        <div class="tab-content active" id="keysTab">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Search keys..." onkeyup="searchKeys(this.value)">
+            </div>
+            
+            <div class="table-container">
+                <table id="keysTable">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Devices</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysTableBody">
+                        <!-- Keys will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div class="tab-content" id="ordersTab">
+            <div class="table-container">
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <!-- Orders will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-content" id="usersTab">
+            <div class="table-container">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Keys</th>
+                            <th>Total Spent</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Generate Tab -->
+        <div class="tab-content" id="generateTab">
+            <h3 style="margin-bottom: 20px;">Generate New Key</h3>
+            
+            <form id="generateForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="genEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Plan</label>
+                        <select id="genPlan" class="form-select" required>
+                            <option value="test">Test (1 hour)</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="lifetime">Lifetime</option>
                         </select>
-                        <p style="color: #888; margin-bottom: 0.5rem;">Send payment to:</p>
-                        <div id="cryptoAddress" style="font-family: monospace; background: #0f0f0f; padding: 0.75rem; border-radius: 4px; word-break: break-all; cursor: pointer; border: 1px solid #333;" onclick="copyCryptoAddress()">
-                            bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8
-                        </div>
-                        <button type="button" onclick="copyCryptoAddress()" style="margin-top: 0.5rem; padding: 0.5rem; background: #333; color: white; border: none; border-radius: 4px; width: 100%; cursor: pointer;">📋 Copy Address</button>
-                        <p style="color: #ff6633; margin-top: 1rem; font-size: 0.875rem;">
-                            ⚠️ After sending payment:
-                            <br>1. Copy your transaction ID
-                            <br>2. Contact us on Discord with TX ID + email
-                            <br>3. Receive your key within 24 hours
-                        </p>
                     </div>
                 </div>
-                <button class="product-btn" onclick="processPayment()">
-                    <span id="paymentBtnText">Continue to Payment</span>
-                </button>
-            </div>
-            <div id="loading" style="display: none;">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Processing...</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="number" id="genPrice" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Expiry (Optional)</label>
+                        <input type="datetime-local" id="genExpiry">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success" style="padding: 12px 24px;">Generate Key</button>
+            </form>
+
+            <div id="generatedKey" style="display: none; margin-top: 20px; padding: 20px; background: var(--darker); border-radius: 8px;">
+                <h4>Generated Key:</h4>
+                <div class="key-display" id="newKeyDisplay" onclick="copyKey(this.textContent)">
+                    <!-- Generated key will appear here -->
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Client Area Modal -->
-    <div class="modal" id="clientAreaModal">
-        <div class="modal-content">
-            <button class="close-btn" onclick="closeModal('clientAreaModal')">&times;</button>
-            <h2>Client Area</h2>
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settingsTab">
+            <h3 style="margin-bottom: 20px;">System Settings</h3>
             
-            <div id="clientLogin">
+            <div class="form-row">
                 <div class="form-group">
-                    <label>Order Email or License Key</label>
-                    <input type="text" id="clientLookup" placeholder="Enter email or license key">
+                    <label>Backend URL</label>
+                    <input type="url" id="backendUrl" value="">
                 </div>
-                <button class="product-btn" onclick="lookupOrder()">View Order</button>
+                <div class="form-group">
+                    <label>Auto-refresh interval (seconds)</label>
+                    <input type="number" id="refreshInterval" value="30" min="10">
+                </div>
             </div>
 
-            <div id="orderDetails" style="display: none;">
-                <div style="background: var(--darker); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                    <p><strong>License Key:</strong></p>
-                    <div style="font-family: monospace; background: var(--dark); padding: 1rem; border-radius: 8px; text-align: center; font-size: 1.25rem; margin: 1rem 0; border: 2px dashed var(--primary);">
-                        <span id="licenseKeyDisplay">XXXX-XXXX-XXXX-XXXX</span>
-                    </div>
-                    <button class="product-btn" onclick="copyLicense()">Copy License Key</button>
-                </div>
-            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            <button class="btn btn-success" onclick="refreshData()">Refresh All Data</button>
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer>
-        <p>© 2024 LearnLabs. Secure payments via Stripe.</p>
-    </footer>
 
     <script>
-        // UPDATED: Point to your Replit backend URL
-        const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
-        
-        let stripe = null;
-        let isTestMode = false;
-        
-        // Initialize Stripe and check backend status
-        async function initializeApp() {
+        // Configuration - NO HARDCODED URLS!
+        let config = {
+            // Backend URL will be dynamically determined
+            backendUrl: '', 
+            refreshInterval: 30000,
+            isLoggedIn: false
+        };
+
+        // Determine backend URL based on environment
+        function getBackendUrl() {
+            // Check if we're on localhost
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3000';
+            }
+            
+            // Check if backend URL is stored
+            const stored = localStorage.getItem('cpAdminBackendUrl');
+            if (stored) {
+                return stored;
+            }
+            
+            // Prompt for backend URL if not set
+            const url = prompt('Enter your backend URL (e.g., https://your-app.replit.dev):');
+            if (url) {
+                localStorage.setItem('cpAdminBackendUrl', url);
+                return url;
+            }
+            
+            // Fallback - should never reach here
+            return '';
+        }
+
+        // Data storage
+        let keysData = [];
+        let ordersData = [];
+        let usersData = [];
+        let adminCredentials = null;
+        let refreshInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set backend URL
+            config.backendUrl = getBackendUrl();
+            document.getElementById('backendUrl').value = config.backendUrl;
+            
+            // Check if already logged in
+            const storedCreds = sessionStorage.getItem('cpAdminCreds');
+            if (storedCreds) {
+                adminCredentials = storedCreds;
+                testStoredCredentials();
+            }
+
+            // Setup forms
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('generateForm').addEventListener('submit', handleGenerate);
+
+            // Load settings
+            loadSettings();
+        });
+
+        // Test stored credentials
+        async function testStoredCredentials() {
+            if (!config.backendUrl) {
+                config.backendUrl = getBackendUrl();
+            }
+            
             try {
-                const response = await fetch(`${BACKEND_URL}/api/config`);
-                const config = await response.json();
+                const response = await fetch(`${config.backendUrl}/api/admin/stats`, {
+                    headers: {
+                        'Authorization': `Basic ${adminCredentials}`
+                    }
+                });
                 
-                isTestMode = config.testMode;
-                
-                if (config.stripePublishableKey && !config.testMode) {
-                    stripe = Stripe(config.stripePublishableKey);
-                    updateStatus('live', '🟢 Live Mode');
+                if (response.ok) {
+                    showAdminPanel();
                 } else {
-                    updateStatus('test', '🟡 Test Mode');
+                    sessionStorage.removeItem('cpAdminCreds');
+                    adminCredentials = null;
+                }
+            } catch (error) {
+                console.error('Error testing credentials:', error);
+                showNotification('Backend connection error', 'error');
+            }
+        }
+
+        // Authentication
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Create Basic Auth credentials
+            const credentials = btoa(`${username}:${password}`);
+            adminCredentials = credentials;
+            
+            // Clear password from memory
+            document.getElementById('password').value = '';
+            
+            testLoginCredentials(credentials, username);
+        }
+
+        async function testLoginCredentials(credentials, username) {
+            if (!config.backendUrl) {
+                showNotification('Backend URL not configured', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${config.backendUrl}/api/admin/stats`, {
+                    headers: {
+                        'Authorization': `Basic ${credentials}`
+                    }
+                });
+                
+                if (response.ok) {
+                    // Use sessionStorage instead of localStorage for better security
+                    sessionStorage.setItem('cpAdminCreds', credentials);
+                    sessionStorage.setItem('cpAdminUser', username);
+                    
+                    showAdminPanel();
+                    showNotification('Login successful!', 'success');
+                } else {
+                    showNotification('Invalid credentials!', 'error');
+                    adminCredentials = null;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification('Connection error. Check backend URL.', 'error');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('cpAdminCreds');
+            sessionStorage.removeItem('cpAdminUser');
+            adminCredentials = null;
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminPanel').style.display = 'none';
+            config.isLoggedIn = false;
+            
+            // Clear refresh interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            config.isLoggedIn = true;
+            
+            // Load initial data
+            refreshData();
+            
+            // Setup auto-refresh with proper cleanup
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            refreshInterval = setInterval(refreshData, config.refreshInterval);
+        }
+
+        // Tab Management
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Load tab-specific data
+            switch(tabName) {
+                case 'keys':
+                    loadKeys();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'users':
+                    loadUsers();
+                    break;
+            }
+        }
+
+        // Data Loading Functions
+        async function refreshData() {
+            if (!adminCredentials || !config.backendUrl) {
+                return;
+            }
+
+            try {
+                const [stats, keys, orders] = await Promise.all([
+                    fetchData('/api/admin/stats'),
+                    fetchData('/api/admin/keys'),
+                    fetchData('/api/admin/orders')
+                ]);
+
+                // Update stats
+                if (stats) {
+                    document.getElementById('totalKeys').textContent = stats.totalKeys || 0;
+                    document.getElementById('activeKeys').textContent = stats.activeKeys || 0;
+                    document.getElementById('todayRevenue').textContent = '$' + (stats.todayRevenue || 0).toFixed(2);
+                }
+
+                // Store data
+                keysData = keys || [];
+                ordersData = orders || [];
+
+                // Update current tab
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    const tabId = activeTab.id;
+                    if (tabId === 'keysTab') loadKeys();
+                    else if (tabId === 'ordersTab') loadOrders();
+                    else if (tabId === 'usersTab') loadUsers();
+                }
+
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+
+        async function fetchData(endpoint) {
+            if (!adminCredentials || !config.backendUrl) {
+                throw new Error('Not configured');
+            }
+
+            try {
+                const response = await fetch(config.backendUrl + endpoint, {
+                    headers: {
+                        'Authorization': `Basic ${adminCredentials}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 401) {
+                    showNotification('Session expired, please login again', 'error');
+                    logout();
+                    return null;
                 }
                 
-                console.log('App initialized:', { testMode: isTestMode, stripe: !!stripe });
+                if (response.ok) {
+                    return await response.json();
+                }
+                throw new Error(`HTTP ${response.status}`);
             } catch (error) {
-                console.error('Failed to initialize app:', error);
-                updateStatus('error', '🔴 Backend Error');
-            }
-        }
-        
-        function updateStatus(type, text) {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = `status-indicator status-${type}`;
-            indicator.textContent = text;
-        }
-        
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', initializeApp);
-        
-        // Crypto addresses
-        const CRYPTO_ADDRESSES = {
-            btc: 'bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8',
-            eth: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            sol: 'C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm',
-            base: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            polygon: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            monad: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            sui: '0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480'
-        };
-        
-        let selectedProduct = null;
-        let selectedPlan = 'weekly';
-        let selectedPrice = 13.00;
-
-        // Toggle payment method
-        function togglePaymentMethod() {
-            const method = document.getElementById('paymentMethod').value;
-            const cryptoInfo = document.getElementById('cryptoInfo');
-            
-            if (method === 'crypto') {
-                cryptoInfo.style.display = 'block';
-            } else {
-                cryptoInfo.style.display = 'none';
+                console.error('Fetch error:', error);
+                return null;
             }
         }
 
-        // Update crypto address based on selection
-        function updateCryptoAddress() {
-            const cryptoType = document.getElementById('cryptoType').value;
-            const addressDiv = document.getElementById('cryptoAddress');
-            addressDiv.textContent = CRYPTO_ADDRESSES[cryptoType];
-        }
+        function loadKeys() {
+            const tbody = document.getElementById('keysTableBody');
+            tbody.innerHTML = '';
 
-        // Copy crypto address
-        function copyCryptoAddress() {
-            const address = document.getElementById('cryptoAddress').textContent;
-            navigator.clipboard.writeText(address).then(() => {
-                alert('Address copied to clipboard!');
+            keysData.forEach(key => {
+                const row = document.createElement('tr');
+                const status = new Date(key.expires_at) < new Date() ? 'expired' : 'active';
+                const statusClass = status === 'active' ? 'status-active' : 'status-expired';
+
+                // Sanitize display
+                const safeEmail = (key.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safePlan = (key.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                row.innerHTML = `
+                    <td>
+                        <div class="key-display" onclick="copyKey('${key.key_display || 'HIDDEN'}')">${key.key_display || 'HIDDEN'}</div>
+                        ${key.device_count ? `<div class="device-info">Devices: ${key.device_count}</div>` : ''}
+                    </td>
+                    <td>${safeEmail}</td>
+                    <td>${safePlan}</td>
+                    <td><span class="${statusClass}">${status.toUpperCase()}</span></td>
+                    <td>${key.device_count || 0}/2</td>
+                    <td>${new Date(key.expires_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteKey('${key.id}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
             });
         }
 
-        // Product selection
-        function openProductModal(product) {
-            selectedProduct = product;
-            document.getElementById('modalTitle').textContent = 'CanvasPro - Select Your Plan';
-            document.getElementById('purchaseModal').classList.add('active');
-        }
+        function loadOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
 
-        // Plan selection
-        function selectPlan(plan, price) {
-            selectedPlan = plan;
-            selectedPrice = price;
-            
-            document.querySelectorAll('.price-option').forEach(opt => {
-                opt.classList.remove('selected');
+            ordersData.forEach(order => {
+                const row = document.createElement('tr');
+                
+                // Sanitize display
+                const safeEmail = (order.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const safePlan = (order.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                row.innerHTML = `
+                    <td>${order.order_number}</td>
+                    <td>${safeEmail}</td>
+                    <td>${safePlan}</td>
+                    <td>$${order.amount || 0}</td>
+                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    <td><span class="status-active">COMPLETED</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewOrder('${order.id}')">View</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
             });
-            event.currentTarget.classList.add('selected');
         }
 
-        // Process payment
-        async function processPayment() {
-            const email = document.getElementById('email').value;
-            const paymentMethod = document.getElementById('paymentMethod').value;
+        function loadUsers() {
+            const userMap = {};
+            keysData.forEach(key => {
+                if (key.email) {
+                    if (!userMap[key.email]) {
+                        userMap[key.email] = {
+                            email: key.email,
+                            keys: 0,
+                            totalSpent: 0,
+                            lastActive: key.last_device_use || 'Never'
+                        };
+                    }
+                    userMap[key.email].keys++;
+                    userMap[key.email].totalSpent += key.price || 0;
+                }
+            });
+
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            Object.values(userMap).forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Sanitize email
+                const safeEmail = user.email.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                
+                row.innerHTML = `
+                    <td>${safeEmail}</td>
+                    <td>${user.keys}</td>
+                    <td>$${user.totalSpent.toFixed(2)}</td>
+                    <td>${user.lastActive}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="viewUser('${user.email}')">View</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Key Generation
+        async function handleGenerate(e) {
+            e.preventDefault();
             
-            if (!email || !email.includes('@')) {
-                alert('Please enter a valid email address');
+            if (!adminCredentials || !config.backendUrl) {
+                showNotification('Please configure backend and login', 'error');
                 return;
             }
-
-            if (paymentMethod === 'crypto') {
-                alert(`Crypto Payment Instructions:\n\n1. Send ${selectedPrice} USD worth of crypto to the displayed address\n2. Copy your transaction ID\n3. Join our Discord and send:\n   - Transaction ID\n   - Your email: ${email}\n   - Plan: ${selectedPlan}\n\nYou'll receive your key within 24 hours!`);
-                return;
-            }
-
-            document.getElementById('checkoutForm').style.display = 'none';
-            document.getElementById('loading').style.display = 'block';
+            
+            const email = document.getElementById('genEmail').value;
+            const plan = document.getElementById('genPlan').value;
+            const price = parseFloat(document.getElementById('genPrice').value);
+            const customExpiry = document.getElementById('genExpiry').value;
 
             try {
-                console.log('Sending request to backend...');
-                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                const response = await fetch(config.backendUrl + '/api/admin/generate-key', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Authorization': `Basic ${adminCredentials}`
                     },
                     body: JSON.stringify({
                         email,
-                        plan: selectedPlan,
-                        price: selectedPrice,
-                        product: selectedProduct || 'canvaspro'
+                        plan,
+                        price,
+                        customExpiry: customExpiry || null
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
+                if (response.status === 401) {
+                    showNotification('Session expired, please login again', 'error');
+                    logout();
+                    return;
                 }
 
-                const data = await response.json();
-                console.log('Response:', data);
+                const result = await response.json();
                 
-                if (data.url && stripe && !isTestMode) {
-                    // Redirect to Stripe
-                    window.location.href = data.url;
-                } else if (data.testMode && data.license) {
-                    // Show test license immediately
-                    showLicenseKey(data.license, data.orderNumber);
-                } else if (data.success && data.license) {
-                    // Direct license
-                    showLicenseKey(data.license, data.orderNumber);
-                } else if (data.url) {
-                    // Stripe URL but no client-side Stripe
-                    window.location.href = data.url;
+                if (result.success) {
+                    document.getElementById('newKeyDisplay').textContent = result.key;
+                    document.getElementById('generatedKey').style.display = 'block';
+                    document.getElementById('generateForm').reset();
+                    showNotification('Key generated successfully!', 'success');
+                    refreshData();
                 } else {
-                    throw new Error('No checkout URL or license received');
+                    showNotification(result.error || 'Failed to generate key', 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                
-                if (error.message.includes('Failed to fetch')) {
-                    alert('Backend server is not responding. Please make sure Replit server is running or contact support.');
-                } else {
-                    alert(`Error: ${error.message}\n\nPlease try again or contact support.`);
-                }
-                
-                document.getElementById('checkoutForm').style.display = 'block';
-                document.getElementById('loading').style.display = 'none';
+                console.error('Generate key error:', error);
+                showNotification('Error generating key', 'error');
             }
         }
 
-        // Show license key
-        function showLicenseKey(key, orderNumber) {
-            alert(`✅ Order Complete!\n\nOrder #: ${orderNumber}\nLicense Key: ${key}\n\nCheck your email for details!`);
-            closeModal('purchaseModal');
+        // Utility Functions
+        function copyKey(key) {
+            navigator.clipboard.writeText(key).then(() => {
+                showNotification('Key copied to clipboard!', 'success');
+            }).catch(() => {
+                showNotification('Failed to copy key', 'error');
+            });
         }
 
-        // Client area
-        function openClientArea() {
-            document.getElementById('clientAreaModal').classList.add('active');
+        function searchKeys(query) {
+            const rows = document.querySelectorAll('#keysTableBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+            });
         }
 
-        async function lookupOrder() {
-            const lookup = document.getElementById('clientLookup').value;
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function saveSettings() {
+            const newBackendUrl = document.getElementById('backendUrl').value;
+            const newRefreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
             
-            if (!lookup) {
-                alert('Please enter your email or license key');
+            if (newBackendUrl) {
+                config.backendUrl = newBackendUrl;
+                localStorage.setItem('cpAdminBackendUrl', newBackendUrl);
+            }
+            
+            config.refreshInterval = newRefreshInterval;
+            localStorage.setItem('cpAdminRefreshInterval', newRefreshInterval);
+            
+            // Reset refresh interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = setInterval(refreshData, config.refreshInterval);
+            }
+            
+            showNotification('Settings saved!', 'success');
+        }
+
+        function loadSettings() {
+            const savedUrl = localStorage.getItem('cpAdminBackendUrl');
+            const savedInterval = localStorage.getItem('cpAdminRefreshInterval');
+            
+            if (savedUrl) {
+                config.backendUrl = savedUrl;
+                document.getElementById('backendUrl').value = savedUrl;
+            }
+            
+            if (savedInterval) {
+                config.refreshInterval = parseInt(savedInterval);
+                document.getElementById('refreshInterval').value = config.refreshInterval / 1000;
+            }
+        }
+
+        // Key Management Functions
+        async function deleteKey(keyId) {
+            if (!confirm('Are you sure you want to delete this key?')) return;
+            
+            if (!adminCredentials || !config.backendUrl) {
+                showNotification('Not configured', 'error');
                 return;
             }
-
+            
             try {
-                const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lookup })
+                const response = await fetch(config.backendUrl + `/api/admin/delete-key/${keyId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Basic ${adminCredentials}`
+                    }
                 });
-
-                const data = await response.json();
                 
-                if (data.found) {
-                    document.getElementById('clientLogin').style.display = 'none';
-                    document.getElementById('orderDetails').style.display = 'block';
-                    document.getElementById('licenseKeyDisplay').textContent = data.order.licenseKey;
+                if (response.status === 401) {
+                    showNotification('Session expired', 'error');
+                    logout();
+                    return;
+                }
+                
+                if (response.ok) {
+                    showNotification('Key deleted successfully!', 'success');
+                    refreshData();
                 } else {
-                    alert('No order found');
+                    const error = await response.json();
+                    showNotification(error.error || 'Failed to delete key', 'error');
                 }
             } catch (error) {
-                alert('Error looking up order');
+                showNotification('Error deleting key', 'error');
             }
         }
 
-        function copyLicense() {
-            const text = document.getElementById('licenseKeyDisplay').textContent;
-            navigator.clipboard.writeText(text);
-            alert('License key copied!');
+        function viewOrder(orderId) {
+            showNotification('Order details coming soon', 'warning');
         }
 
-        // Modal controls
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-            document.getElementById('checkoutForm').style.display = 'block';
-            document.getElementById('loading').style.display = 'none';
+        function viewUser(email) {
+            showNotification('User details coming soon', 'warning');
         }
 
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.classList.remove('active');
-            }
-        }
-
-        // Handle payment success redirect (for success page)
-        window.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('payment') === 'success') {
-                alert('🎉 Payment Successful!\n\nYour license key has been sent to your email.\nCheck your inbox (and spam folder).\n\nJoin our Discord for support!');
-                window.history.replaceState({}, '', '/');
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
             }
         });
     </script>
