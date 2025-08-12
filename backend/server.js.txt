@@ -1,0 +1,190 @@
+// server.js - Simplified Backend for Free Hosting
+const express = require('express');
+const cors = require('cors');
+const crypto = require('crypto');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// In-memory storage (replace with Supabase in production)
+const licenses = new Map();
+
+// Stripe setup (we'll use test mode first)
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_YOUR_KEY_HERE');
+
+// Email setup using Resend (free tier)
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_YOUR_KEY_HERE');
+
+// Generate license key
+function generateLicenseKey() {
+    const segments = [];
+    for (let i = 0; i < 4; i++) {
+        segments.push(crypto.randomBytes(2).toString('hex').toUpperCase());
+    }
+    return segments.join('-');
+}
+
+// Calculate expiry
+function getExpiryDate(plan) {
+    const now = new Date();
+    switch(plan) {
+        case 'weekly':
+            now.setDate(now.getDate() + 7);
+            break;
+        case 'monthly':
+            now.setMonth(now.getMonth() + 1);
+            break;
+        case 'lifetime':
+            now.setFullYear(now.getFullYear() + 100);
+            break;
+    }
+    return now;
+}
+
+// Health check
+app.get('/', (req, res) => {
+    res.json({ status: 'CanvasPro Backend Running!', time: new Date() });
+});
+
+// Create Stripe checkout session
+app.post('/api/create-checkout', async (req, res) => {
+    try {
+        const { email, plan, price } = req.body;
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            customer_email: email,
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `CanvasPro ${plan.charAt(0).toUpperCase() + plan.slice(1)} License`,
+                        description: `${plan} access to CanvasPro`,
+                    },
+                    unit_amount: Math.round(price * 100),
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}`,
+            metadata: {
+                email,
+                plan
+            }
+        });
+
+        res.json({ url: session.url });
+    } catch (error) {
+        console.error('Checkout error:', error);
+        res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+});
+
+// Stripe webhook
+app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            process.env.STRIPE_WEBHOOK_SECRET || 'whsec_test'
+        );
+    } catch (err) {
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        
+        // Generate license
+        const licenseKey = generateLicenseKey();
+        const licenseData = {
+            key: licenseKey,
+            email: session.customer_email,
+            plan: session.metadata.plan,
+            createdAt: new Date(),
+            expiresAt: getExpiryDate(session.metadata.plan)
+        };
+        
+        // Store license
+        licenses.set(licenseKey, licenseData);
+        
+        // Send email
+        await sendLicenseEmail(licenseData);
+    }
+
+    res.json({received: true});
+});
+
+// Send license email
+async function sendLicenseEmail(license) {
+    try {
+        await resend.emails.send({
+            from: 'CanvasPro <onboarding@resend.dev>',
+            to: license.email,
+            subject: 'Your CanvasPro License Key',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #ff6633, #ff8855); padding: 30px; text-align: center; color: white;">
+                        <h1>Welcome to CanvasPro!</h1>
+                    </div>
+                    <div style="padding: 30px; background: #f5f5f5;">
+                        <h2 style="color: #333;">Your License Key:</h2>
+                        <div style="background: white; padding: 20px; border-radius: 8px; font-size: 24px; font-family: monospace; text-align: center; margin: 20px 0;">
+                            ${license.key}
+                        </div>
+                        <p><strong>Plan:</strong> ${license.plan.toUpperCase()}</p>
+                        <p><strong>Valid Until:</strong> ${license.expiresAt.toLocaleDateString()}</p>
+                        
+                        <h3>How to Activate:</h3>
+                        <ol>
+                            <li>Install the CanvasPro script</li>
+                            <li>Press Ctrl+Shift+A on any Canvas page</li>
+                            <li>Enter your license key</li>
+                        </ol>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                            If you have any questions, reply to this email.
+                        </p>
+                    </div>
+                </div>
+            `
+        });
+        console.log('Email sent to:', license.email);
+    } catch (error) {
+        console.error('Email error:', error);
+    }
+}
+
+// Verify license endpoint
+app.post('/api/verify-license', (req, res) => {
+    const { key } = req.body;
+    const license = licenses.get(key);
+    
+    if (!license) {
+        return res.status(404).json({ valid: false, error: 'Invalid license key' });
+    }
+    
+    if (new Date() > license.expiresAt) {
+        return res.status(403).json({ valid: false, error: 'License expired' });
+    }
+    
+    res.json({
+        valid: true,
+        plan: license.plan,
+        expiresAt: license.expiresAt
+    });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
