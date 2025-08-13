@@ -20,32 +20,36 @@ console.log('🚀 Starting Secure CanvasPro Backend...');
 const CONFIG = {
     // JWT Secret for API authentication
     JWT_SECRET: process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex'),
-    
+
     // API Authentication Token (for Tampermonkey script)
     API_SECRET_TOKEN: process.env.API_SECRET_TOKEN,
-    
+
     // Admin credentials - MUST be hashed in production
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH, // Store bcrypt hash, not plain password
-    
+   
+ 
     // Stripe API Keys
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    
+
     // Email service
     RESEND_API_KEY: process.env.RESEND_API_KEY,
-    
+
     // Encryption keys
     KEY_ENCRYPTION_KEY: process.env.KEY_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'),
     KEY_ENCRYPTION_IV: process.env.KEY_ENCRYPTION_IV || crypto.randomBytes(16).toString('hex'),
-    
+
     // Security settings
     ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
     NODE_ENV: process.env.NODE_ENV || 'development',
-    
+
     // Session secret
-    SESSION_SECRET: process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex')
+    SESSION_SECRET: process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex'),
+
+    // OpenAI API Key 
+    'OPENAI_API_KEY': process.env.OPENAI_API_KEY, // Set in Replit Secrets
 };
 
 // ============================================
@@ -95,9 +99,9 @@ function validateEnvironment() {
         'KEY_ENCRYPTION_KEY',
         'KEY_ENCRYPTION_IV'
     ];
-    
+
     const missing = required.filter(key => !process.env[key]);
-    
+
     if (missing.length > 0) {
         console.error('❌ CRITICAL: Missing required environment variables:');
         missing.forEach(key => console.error(`   - ${key}`));
@@ -110,12 +114,12 @@ function validateEnvironment() {
         console.error('   JWT_SECRET: ' + crypto.randomBytes(64).toString('hex'));
         console.error('   KEY_ENCRYPTION_KEY: ' + crypto.randomBytes(32).toString('hex'));
         console.error('   KEY_ENCRYPTION_IV: ' + crypto.randomBytes(16).toString('hex'));
-        
+
         if (CONFIG.NODE_ENV === 'production') {
             process.exit(1);
         }
     }
-    
+
     return missing.length === 0;
 }
 
@@ -126,16 +130,19 @@ const isConfigured = validateEnvironment();
 // ============================================
 const corsOptions = {
     origin: function(origin, callback) {
-        // In production, strictly check allowed origins
-        if (CONFIG.NODE_ENV === 'production') {
-            if (!origin || CONFIG.ALLOWED_ORIGINS.includes(origin)) {
+        // Allow requests with no origin (like Tampermonkey)
+        if (!origin) return callback(null, true);
+
+        // In development, allow all origins
+        if (CONFIG.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            // In production, check allowed origins
+            if (CONFIG.ALLOWED_ORIGINS.includes(origin)) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
             }
-        } else {
-            // Development mode - less strict
-            callback(null, true);
         }
     },
     credentials: true,
@@ -154,15 +161,15 @@ app.use(express.static('./')); // Serve static files for admin panel
 // ============================================
 function requireApiToken(req, res, next) {
     const token = req.headers['x-api-token'] || req.headers['authorization']?.replace('Bearer ', '');
-    
+
     if (!CONFIG.API_SECRET_TOKEN) {
         return res.status(503).json({ error: 'API not configured' });
     }
-    
+
     if (!token || token !== CONFIG.API_SECRET_TOKEN) {
         return res.status(401).json({ error: 'Invalid API token' });
     }
-    
+
     next();
 }
 
@@ -179,17 +186,17 @@ function generateAdminToken(username) {
 
 function requireAdmin(req, res, next) {
     const authHeader = req.headers.authorization;
-    
+
     // Support both JWT and Basic auth for backward compatibility
     if (authHeader && authHeader.startsWith('Basic ')) {
         // Handle Basic auth for existing admin panels
         const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
         const [username, password] = credentials.split(':');
-        
+
         if (!CONFIG.ADMIN_USERNAME || !CONFIG.ADMIN_PASSWORD_HASH) {
             return res.status(503).json({ error: 'Admin not configured' });
         }
-        
+
         // For basic auth, we need to check against a plain password temporarily
         // You should migrate to JWT tokens ASAP
         bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH).then(valid => {
@@ -203,7 +210,7 @@ function requireAdmin(req, res, next) {
     } else if (authHeader && authHeader.startsWith('Bearer ')) {
         // Handle JWT auth (preferred)
         const token = authHeader.replace('Bearer ', '');
-        
+
         try {
             const decoded = jwt.verify(token, CONFIG.JWT_SECRET);
             if (decoded.role !== 'admin') {
@@ -302,13 +309,22 @@ db.serialize(() => {
         UNIQUE(identifier)
     )`);
 
+    db.run(`CREATE TABLE IF NOT EXISTS answer_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT,
+        answer TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    
     // Create indexes for performance
     db.run(`CREATE INDEX IF NOT EXISTS idx_keys_email ON keys(email)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_keys_active ON keys(is_active)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_devices_key ON key_devices(key_id)`);
-    
+
     console.log('✅ Secure database initialized');
+
 });
+
 
 // ============================================
 // SECURE ENCRYPTION FUNCTIONS
@@ -318,11 +334,11 @@ function encryptKey(key) {
         const algorithm = 'aes-256-cbc';
         const keyBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, '0'));
         const ivBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, '0'));
-        
+
         const cipher = crypto.createCipheriv(algorithm, keyBuffer, ivBuffer);
         let encrypted = cipher.update(key, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        
+
         return encrypted;
     } catch (error) {
         console.error('Encryption error:', error);
@@ -336,11 +352,11 @@ function decryptKey(encryptedKey) {
         const algorithm = 'aes-256-cbc';
         const keyBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, '0'));
         const ivBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, '0'));
-        
+
         const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
         let decrypted = decipher.update(encryptedKey, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
-        
+
         return decrypted;
     } catch (error) {
         console.error('Decryption error:', error);
@@ -375,13 +391,13 @@ function getExpiryDate(plan) {
         'yearly': () => now.setFullYear(now.getFullYear() + 1),
         'lifetime': () => now.setFullYear(now.getFullYear() + 100)
     };
-    
+
     if (expiryMap[plan]) {
         expiryMap[plan]();
     } else {
         now.setDate(now.getDate() + 7); // Default to weekly
     }
-    
+
     return now;
 }
 
@@ -481,12 +497,13 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Public config endpoint (safe data only)
+// Public config endpoint (REQUIRED for Tampermonkey to get API token)
 app.get('/api/config', (req, res) => {
     res.json({ 
         stripePublishableKey: CONFIG.STRIPE_PUBLISHABLE_KEY || '',
         testMode: !CONFIG.STRIPE_SECRET_KEY,
-        version: '3.0.0'
+        version: '3.0.0',
+        apiToken: CONFIG.API_SECRET_TOKEN // This sends the token to Tampermonkey
     });
 });
 
@@ -495,11 +512,11 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
     const { key, deviceId } = req.body;
     const ip = req.ip || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'] || '';
-    
+
     if (!key || !deviceId) {
         return res.status(400).json({ valid: false, error: 'Missing required fields' });
     }
-    
+
     // Use prepared statement to prevent SQL injection
     db.get(
         `SELECT * FROM keys WHERE key = ? AND is_active = 1`,
@@ -509,7 +526,7 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                 console.error('Database error:', err);
                 return res.status(500).json({ valid: false, error: 'Database error' });
             }
-            
+
             if (!keyData) {
                 // Log failed attempt
                 db.run(
@@ -519,7 +536,7 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                 );
                 return res.json({ valid: false, error: 'Invalid key' });
             }
-            
+
             // Check expiration
             if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
                 db.run(
@@ -529,7 +546,7 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                 );
                 return res.json({ valid: false, error: 'Key expired' });
             }
-            
+
             // Device binding check
             db.all(
                 `SELECT * FROM key_devices WHERE key_id = ? AND is_active = 1`,
@@ -538,10 +555,10 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                     if (err) {
                         return res.status(500).json({ valid: false, error: 'Database error' });
                     }
-                    
+
                     const existingDevice = devices.find(d => d.device_id === deviceId);
                     const maxDevices = 2;
-                    
+
                     if (existingDevice) {
                         // Update existing device
                         db.run(
@@ -566,28 +583,28 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                             .update(userAgent + deviceId)
                             .digest('hex')
                             .substring(0, 16);
-                            
+
                         db.run(
                             `INSERT INTO key_devices (key_id, device_id, device_fingerprint)
                              VALUES (?, ?, ?)`,
                             [keyData.id, deviceId, fingerprint]
                         );
                     }
-                    
+
                     // Update key usage
                     db.run(
                         `UPDATE keys SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 
                          WHERE id = ?`,
                         [keyData.id]
                     );
-                    
+
                     // Log successful validation
                     db.run(
                         `INSERT INTO key_logs (key_id, device_id, ip_address, user_agent, success)
                          VALUES (?, ?, ?, ?, 1)`,
                         [keyData.id, deviceId, ip, userAgent]
                     );
-                    
+
                     res.json({
                         valid: true,
                         product: keyData.product,
@@ -607,26 +624,79 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
     );
 });
 
+// Key Validation endpoint (requires API token )
+// Key validation endpoint (requires API token)
+app.post('/api/validate-key', requireApiToken, async (req, res) => {
+    // ... existing validation code ...
+});
+
+// AI Answer endpoint (requires API token) - ADD THIS NEW ENDPOINT HERE
+app.post('/api/answer-question', requireApiToken, async (req, res) => {
+    const { question, choices, type } = req.body;
+
+    if (!process.env.OPENAI_API_KEY) {
+        return res.json({ success: false, error: 'AI not configured' });
+    }
+
+    try {
+        const { OpenAI } = require('openai');
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are helping a student with disabilities complete their coursework. Provide accurate, educational answers."
+                },
+                {
+                    role: "user",
+                    content: `Question: ${question}\n${type === 'mc' ? 'Choices: ' + choices.join(', ') : ''}\nProvide the best answer.`
+                }
+            ],
+            max_tokens: 150,
+            temperature: 0.3
+        });
+
+        const answer = completion.choices[0].message.content;
+
+        // Log for compliance/auditing
+        db.run(
+            `INSERT INTO answer_logs (question, answer, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+            [question.substring(0, 100), answer.substring(0, 100)]
+        );
+
+        res.json({ success: true, answer });
+    } catch (error) {
+        console.error('OpenAI error:', error);
+        res.json({ success: false, error: 'Failed to generate answer' });
+    }
+});
+
+// Create checkout session (Stripe) - this already exists
+app.post('/api/create-checkout', async (req, res) => {
+    // ... existing code ...
+});
 // Create checkout session (Stripe)
 app.post('/api/create-checkout', async (req, res) => {
     try {
         const { email, plan = 'weekly', price = 13, product = 'canvaspro' } = req.body;
-        
+
         console.log('📝 Creating checkout:', { email, plan, price, product });
-        
+
         if (!email || !email.includes('@')) {
             return res.status(400).json({ error: 'Valid email required' });
         }
-        
+
         // Test mode if Stripe not configured
         if (!stripe) {
             console.log('🧪 Test mode - generating license');
-            
+
             const orderNumber = generateOrderNumber();
             const licenseKey = generateLicenseKey();
             const encryptedKey = encryptKey(licenseKey);
             const expiresAt = getExpiryDate(plan);
-            
+
             db.run(
                 `INSERT INTO keys (key, encrypted_key, email, product, plan, price, expires_at, is_active, created_by) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'system')`,
@@ -636,15 +706,15 @@ app.post('/api/create-checkout', async (req, res) => {
                         console.error('❌ Database error:', err);
                         return res.status(500).json({ error: 'Database error' });
                     }
-                    
+
                     const keyId = this.lastID;
-                    
+
                     db.run(
                         `INSERT INTO orders (order_number, email, product, plan, amount, key_id, status) 
                          VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
                         [orderNumber, email, product, plan, price, keyId]
                     );
-                    
+
                     await sendOrderEmail({
                         orderNumber,
                         licenseKey,
@@ -652,7 +722,7 @@ app.post('/api/create-checkout', async (req, res) => {
                         plan,
                         expiresAt
                     });
-                    
+
                     res.json({ 
                         success: true,
                         testMode: true,
@@ -665,7 +735,7 @@ app.post('/api/create-checkout', async (req, res) => {
             );
             return;
         }
-        
+
         // Real Stripe checkout
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -687,7 +757,7 @@ app.post('/api/create-checkout', async (req, res) => {
             cancel_url: `${process.env.FRONTEND_URL || 'https://learnlabs.shop'}`,
             metadata: { email, plan, product, price: price.toString() }
         });
-        
+
         console.log('✅ Stripe session created:', session.id);
         res.json({ url: session.url });
     } catch (error) {
@@ -704,10 +774,10 @@ app.post('/api/webhook', async (req, res) => {
     if (!stripe) {
         return res.status(400).json({ error: 'Stripe not configured' });
     }
-    
+
     const sig = req.headers['stripe-signature'];
     let event;
-    
+
     try {
         event = stripe.webhooks.constructEvent(
             req.body,
@@ -718,17 +788,17 @@ app.post('/api/webhook', async (req, res) => {
         console.error('❌ Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-    
+
     console.log('📨 Webhook received:', event.type);
-    
+
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
-        
+
         const orderNumber = generateOrderNumber();
         const licenseKey = generateLicenseKey();
         const encryptedKey = encryptKey(licenseKey);
         const expiresAt = getExpiryDate(session.metadata.plan);
-        
+
         db.run(
             `INSERT INTO keys (key, encrypted_key, email, product, plan, price, stripe_session_id, expires_at, is_active, created_by) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'stripe')`,
@@ -747,9 +817,9 @@ app.post('/api/webhook', async (req, res) => {
                     console.error('❌ Database error in webhook:', err);
                     return;
                 }
-                
+
                 const keyId = this.lastID;
-                
+
                 db.run(
                     `INSERT INTO orders (order_number, email, product, plan, amount, key_id, stripe_session_id, status) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')`,
@@ -763,7 +833,7 @@ app.post('/api/webhook', async (req, res) => {
                         session.id
                     ]
                 );
-                
+
                 await sendOrderEmail({
                     orderNumber,
                     licenseKey,
@@ -771,23 +841,23 @@ app.post('/api/webhook', async (req, res) => {
                     plan: session.metadata.plan,
                     expiresAt
                 });
-                
+
                 console.log('✅ Webhook order processed:', { orderNumber, email: session.customer_email });
             }
         );
     }
-    
+
     res.json({ received: true });
 });
 
 // Session lookup
 app.get('/api/session/:sessionId', (req, res) => {
     const { sessionId } = req.params;
-    
+
     if (!sessionId) {
         return res.status(400).json({ error: 'Session ID required' });
     }
-    
+
     db.get(
         `SELECT k.*, o.order_number 
          FROM keys k 
@@ -799,11 +869,11 @@ app.get('/api/session/:sessionId', (req, res) => {
                 console.error('❌ Database error:', err);
                 return res.status(500).json({ found: false, error: 'Database error' });
             }
-            
+
             if (!row) {
                 return res.status(404).json({ found: false, error: 'Order not found' });
             }
-            
+
             res.json({
                 found: true,
                 orderNumber: row.order_number,
@@ -820,22 +890,22 @@ app.get('/api/session/:sessionId', (req, res) => {
 // Client lookup
 app.post('/api/client/lookup', (req, res) => {
     const { lookup } = req.body;
-    
+
     if (!lookup) {
         return res.status(400).json({ error: 'Email or license key required' });
     }
-    
+
     const query = lookup.includes('-') 
         ? `SELECT * FROM keys WHERE key = ?`
         : `SELECT * FROM keys WHERE email = ? ORDER BY created_at DESC LIMIT 1`;
-    
+
     db.get(query, [lookup], (err, row) => {
         if (err || !row) {
             return res.status(404).json({ found: false, error: 'Order not found' });
         }
-        
+
         const isExpired = new Date() > new Date(row.expires_at);
-        
+
         res.json({
             found: true,
             order: {
@@ -853,36 +923,36 @@ app.post('/api/client/lookup', (req, res) => {
 // Admin login endpoint
 app.post('/api/admin/login', strictLimiter, async (req, res) => {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password required' });
     }
-    
+
     if (!CONFIG.ADMIN_USERNAME || !CONFIG.ADMIN_PASSWORD_HASH) {
         return res.status(503).json({ error: 'Admin not configured' });
     }
-    
+
     if (username !== CONFIG.ADMIN_USERNAME) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
+
     // Verify password against hash
     const validPassword = await bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH);
-    
+
     if (!validPassword) {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
+
     // Generate JWT token
     const token = generateAdminToken(username);
-    
+
     // Log admin login
     db.run(
         `INSERT INTO admin_logs (admin_user, action, ip_address, details)
          VALUES (?, ?, ?, ?)`,
         [username, 'login', req.ip, 'Successful login']
     );
-    
+
     res.json({ 
         success: true, 
         token,
@@ -897,7 +967,7 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
         `SELECT COUNT(*) as activeKeys FROM keys WHERE is_active = 1 AND expires_at > datetime('now')`,
         `SELECT COALESCE(SUM(amount), 0) as todayRevenue FROM orders WHERE date(created_at) = date('now')`
     ];
-    
+
     Promise.all(queries.map(query => 
         new Promise((resolve) => {
             db.get(query, (err, row) => resolve(row || {}));
@@ -927,7 +997,7 @@ app.get('/api/admin/keys', requireAdmin, (req, res) => {
                 console.error('❌ Database error:', err);
                 return res.status(500).json({ error: 'Database error' });
             }
-            
+
             // Don't send plain text keys to frontend
             const safeKeys = rows.map(key => ({
                 ...key,
@@ -935,7 +1005,7 @@ app.get('/api/admin/keys', requireAdmin, (req, res) => {
                 key: undefined, // Remove actual key
                 encrypted_key: undefined // Remove encrypted key
             }));
-            
+
             res.json(safeKeys);
         }
     );
@@ -954,13 +1024,13 @@ app.get('/api/admin/orders', requireAdmin, (req, res) => {
                 console.error('❌ Database error:', err);
                 return res.status(500).json({ error: 'Database error' });
             }
-            
+
             // Obfuscate keys in orders too
             const safeOrders = rows.map(order => ({
                 ...order,
                 key: order.key ? order.key.substring(0, 4) + '-****-****-' + order.key.substring(order.key.length - 4) : null
             }));
-            
+
             res.json(safeOrders);
         }
     );
@@ -970,21 +1040,21 @@ app.get('/api/admin/orders', requireAdmin, (req, res) => {
 app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
     const { email, plan, price = 0, customExpiry } = req.body;
     const adminUser = req.adminUser;
-    
+
     if (!email || !plan) {
         return res.status(400).json({ error: 'Email and plan required' });
     }
-    
+
     // Validate email format
     if (!email.includes('@')) {
         return res.status(400).json({ error: 'Invalid email format' });
     }
-    
+
     const orderNumber = generateOrderNumber();
     const licenseKey = generateLicenseKey();
     const encryptedKey = encryptKey(licenseKey);
     const expiresAt = customExpiry ? new Date(customExpiry) : getExpiryDate(plan);
-    
+
     db.run(
         `INSERT INTO keys (key, encrypted_key, email, product, plan, price, expires_at, is_active, created_by) 
          VALUES (?, ?, ?, 'canvaspro', ?, ?, ?, 1, ?)`,
@@ -994,23 +1064,23 @@ app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
                 console.error('Database error:', err);
                 return res.status(500).json({ error: 'Failed to generate key' });
             }
-            
+
             const keyId = this.lastID;
-            
+
             // Create order record
             db.run(
                 `INSERT INTO orders (order_number, email, product, plan, amount, key_id, status) 
                  VALUES (?, ?, 'canvaspro', ?, ?, ?, 'completed')`,
                 [orderNumber, email, plan, price, keyId]
             );
-            
+
             // Log admin action
             db.run(
                 `INSERT INTO admin_logs (admin_user, action, target_id, details, ip_address)
                  VALUES (?, ?, ?, ?, ?)`,
                 [adminUser, 'generate_key', keyId, JSON.stringify({ email, plan }), req.ip]
             );
-            
+
             // Try to send email
             sendOrderEmail({
                 orderNumber,
@@ -1019,7 +1089,7 @@ app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
                 plan,
                 expiresAt
             });
-            
+
             res.json({
                 success: true,
                 key: licenseKey,
@@ -1034,7 +1104,7 @@ app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
 app.delete('/api/admin/delete-key/:keyId', requireAdmin, (req, res) => {
     const keyId = req.params.keyId;
     const adminUser = req.adminUser;
-    
+
     db.run(
         `UPDATE keys SET is_active = 0 WHERE id = ?`,
         [keyId],
@@ -1043,21 +1113,21 @@ app.delete('/api/admin/delete-key/:keyId', requireAdmin, (req, res) => {
                 console.error('❌ Delete key error:', err);
                 return res.status(500).json({ error: 'Failed to delete key' });
             }
-            
+
             if (this.changes === 0) {
                 return res.status(404).json({ error: 'Key not found' });
             }
-            
+
             // Deactivate all devices
             db.run(`UPDATE key_devices SET is_active = 0 WHERE key_id = ?`, [keyId]);
-            
+
             // Log admin action
             db.run(
                 `INSERT INTO admin_logs (admin_user, action, target_id, ip_address)
                  VALUES (?, ?, ?, ?)`,
                 [adminUser, 'delete_key', keyId, req.ip]
             );
-            
+
             res.json({ success: true });
         }
     );
