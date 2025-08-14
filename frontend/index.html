@@ -466,7 +466,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Email Modal */
+        /* Modal Overlays */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -601,6 +601,73 @@
             display: block;
         }
 
+        /* Verification Modal Specific Styles */
+        .verification-modal .modal-content {
+            border-color: var(--blue);
+        }
+
+        .verification-modal .modal-title {
+            color: var(--blue);
+        }
+
+        .verification-modal .modal-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .verification-modal .modal-btn-primary {
+            background: linear-gradient(135deg, var(--blue) 0%, #2563eb 100%);
+        }
+
+        /* Payment Options Modal */
+        .payment-modal .modal-content {
+            max-width: 600px;
+        }
+
+        .payment-options {
+            display: grid;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .payment-option {
+            background: var(--darker);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .payment-option:hover {
+            border-color: var(--primary);
+            background: rgba(255, 102, 51, 0.05);
+        }
+
+        .payment-option.selected {
+            border-color: var(--primary);
+            background: rgba(255, 102, 51, 0.1);
+        }
+
+        .payment-icon {
+            font-size: 2rem;
+            width: 50px;
+            text-align: center;
+        }
+
+        .payment-info h4 {
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .payment-info p {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
         /* Footer */
         footer {
             padding: 40px;
@@ -648,10 +715,43 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.offline {
+            background: #ef4444;
+            color: white;
+        }
+
+        .connection-status.checking {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .connection-status.online {
+            background: var(--green);
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="bg-animation"></div>
+
+    <!-- Connection Status Indicator -->
+    <div class="connection-status" id="connectionStatus" style="display: none;">
+        🔄 Checking connection...
+    </div>
 
     <!-- Email Modal -->
     <div class="modal-overlay" id="emailModal">
@@ -673,6 +773,64 @@
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="proceedWithCheckout()">Continue</button>
                 <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div class="modal-overlay verification-modal" id="verificationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="font-size: 2rem;">🔐</span>
+                <span class="modal-title">Security Verification</span>
+            </div>
+            <p class="modal-subtitle">For security, please enter the last 4 characters of your license key or order number</p>
+            
+            <input type="text" 
+                   class="modal-input" 
+                   id="verificationInput" 
+                   placeholder="Last 4 characters"
+                   maxlength="4">
+            
+            <div class="error-message" id="verificationError">Please enter the last 4 characters</div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="proceedWithVerification()">Verify</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeVerificationModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Options Modal -->
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <img src="https://i.imgur.com/OozsIMD.png" alt="LearnLabs">
+                <span class="modal-title">Choose Payment Method</span>
+            </div>
+            <p class="modal-subtitle">Select your preferred payment option</p>
+            
+            <div class="payment-options">
+                <div class="payment-option" onclick="selectPaymentMethod('stripe')">
+                    <div class="payment-icon">💳</div>
+                    <div class="payment-info">
+                        <h4>Credit/Debit Card</h4>
+                        <p>Secure payment via Stripe</p>
+                    </div>
+                </div>
+                
+                <div class="payment-option" onclick="selectPaymentMethod('crypto')">
+                    <div class="payment-icon">₿</div>
+                    <div class="payment-info">
+                        <h4>Cryptocurrency</h4>
+                        <p>Bitcoin, Ethereum, and more</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="proceedToPayment()" disabled id="paymentProceedBtn">Continue</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -888,22 +1046,106 @@
         <p style="color: #666;">© 2025 LearnLabs. All rights reserved.</p>
     </footer>
 
-    <!-- Stripe JS -->
-    <script src="https://js.stripe.com/v3/"></script>
-    
     <script>
-        // Configuration - FIX THE BACKEND URL HERE
-        const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Q5Nc0RxWQL4Y9dFHlBVJzJWy9zBv3g1S7T1xQdYHgp5e6hJWj1EI6YsNZqr9xXIDJD5BSPDT9EJl3dWKwtJfrEa00BVfJzoQh';
+        // Configuration - FIXED STRIPE KEY AND DYNAMIC BACKEND URL
+        const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
-        // YOUR REPLIT BACKEND URL - Make sure this is correct!
-        const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+        // Dynamic backend URL detection (same logic as admin panel)
+        function getBackendUrl() {
+            try {
+                // Check if we're on localhost
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    return 'http://localhost:3000';
+                }
 
-        // Initialize Stripe
-        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+                // Check if we're on Replit - use same domain
+                if (window.location.hostname.includes('replit.dev')) {
+                    return window.location.origin;
+                }
+
+                // Check if backend URL is stored
+                const stored = localStorage.getItem('cpAdminBackendUrl');
+                if (stored && stored !== 'null' && stored !== '') {
+                    return stored;
+                }
+
+                // Default to current origin
+                return window.location.origin || 'http://localhost:3000';
+            } catch (error) {
+                console.error('Error getting backend URL:', error);
+                return 'http://localhost:3000';
+            }
+        }
+
+        const BACKEND_URL = getBackendUrl() || 'http://localhost:3000';
 
         // Store current checkout info
         let currentCheckoutPlan = null;
         let currentCheckoutPrice = null;
+        let currentPaymentMethod = null;
+        let currentLookupEmail = null;
+
+        // Connection checking
+        let connectionCheckInterval;
+
+        // Check backend connection - FIXED AbortController issue
+        async function checkConnection() {
+            const status = document.getElementById('connectionStatus');
+            
+            try {
+                status.style.display = 'block';
+                status.className = 'connection-status checking';
+                status.innerHTML = '🔄 Checking connection...';
+
+                console.log('🔗 Checking backend connection:', BACKEND_URL);
+
+                // Use a simple timeout promise instead of AbortController
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Connection timeout')), 8000)
+                );
+
+                const fetchPromise = fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+                console.log('📡 Health check response:', response.status, response.ok);
+
+                if (response.ok) {
+                    const healthData = await response.json();
+                    console.log('💚 Backend health:', healthData);
+                    
+                    status.className = 'connection-status online';
+                    status.innerHTML = '✅ Backend Online';
+                    setTimeout(() => {
+                        status.style.display = 'none';
+                    }, 2000);
+                    return true;
+                } else {
+                    throw new Error(`Backend returned ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Connection check failed:', error);
+                status.className = 'connection-status offline';
+                
+                if (error.message === 'Connection timeout') {
+                    status.innerHTML = '❌ Connection Timeout';
+                } else if (error.message.includes('fetch')) {
+                    status.innerHTML = '❌ Network Error';
+                } else {
+                    status.innerHTML = `❌ Backend Offline`;
+                }
+                
+                // Show URL for debugging
+                console.log('🔧 Backend URL being used:', BACKEND_URL);
+                
+                return false;
+            }
+        }
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -935,13 +1177,76 @@
             currentCheckoutPrice = null;
         }
 
+        // Show verification modal
+        function showVerificationModal(email) {
+            currentLookupEmail = email;
+            
+            const modal = document.getElementById('verificationModal');
+            const input = document.getElementById('verificationInput');
+            const error = document.getElementById('verificationError');
+            
+            // Reset modal state
+            input.value = '';
+            error.classList.remove('show');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Focus input after animation
+            setTimeout(() => {
+                input.focus();
+            }, 300);
+        }
+
+        // Close verification modal
+        function closeVerificationModal() {
+            const modal = document.getElementById('verificationModal');
+            modal.classList.remove('show');
+            currentLookupEmail = null;
+        }
+
+        // Show payment modal
+        function showPaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            
+            // Reset payment selection
+            currentPaymentMethod = null;
+            document.querySelectorAll('.payment-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.getElementById('paymentProceedBtn').disabled = true;
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        // Close payment modal
+        function closePaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            modal.classList.remove('show');
+            currentPaymentMethod = null;
+        }
+
+        // Select payment method
+        function selectPaymentMethod(method) {
+            currentPaymentMethod = method;
+            
+            // Update UI
+            document.querySelectorAll('.payment-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            event.currentTarget.classList.add('selected');
+            document.getElementById('paymentProceedBtn').disabled = false;
+        }
+
         // Validate email
         function validateEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return re.test(email);
         }
 
-        // Proceed with checkout
+        // Proceed with checkout (from email modal)
         async function proceedWithCheckout() {
             const input = document.getElementById('modalEmailInput');
             const error = document.getElementById('emailError');
@@ -958,64 +1263,123 @@
             error.classList.remove('show');
             input.style.borderColor = '';
 
-            // Proceed with checkout
-            await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
-            
-            // Close modal
+            // Close email modal and show payment options
             closeEmailModal();
+            showPaymentModal();
         }
 
-        // Checkout function
-        async function checkout(email, plan, price) {
-            // Find the Continue button in the modal
-            const btn = document.querySelector('.modal-btn-primary');
-            const originalText = btn ? btn.innerHTML : 'Continue';
+        // Proceed to payment (from payment modal)
+        async function proceedToPayment() {
+            if (!currentPaymentMethod) return;
+
+            // Close payment modal
+            closePaymentModal();
             
-            if (btn) {
-                btn.innerHTML = '<span class="loading"></span> Processing...';
-                btn.disabled = true;
+            // Get email from the previous modal
+            const email = document.getElementById('modalEmailInput').value.trim();
+
+            // Check connection first
+            const isOnline = await checkConnection();
+            if (!isOnline) {
+                alert('❌ Backend is offline. Please try again later or contact support.');
+                return;
             }
 
+            // Proceed with the selected payment method
+            if (currentPaymentMethod === 'stripe') {
+                await processStripePayment(email);
+            } else if (currentPaymentMethod === 'crypto') {
+                await processCryptoPayment(email);
+            }
+        }
+
+        // Process Stripe payment - FIXED timeout handling
+        async function processStripePayment(email) {
             try {
-                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                console.log('🔄 Creating Stripe checkout...', { email, plan: currentCheckoutPlan, price: currentCheckoutPrice });
+                
+                // Simple timeout without AbortController
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Payment request timeout')), 15000)
+                );
+
+                const fetchPromise = fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ 
                         email, 
-                        plan, 
-                        price,
+                        plan: currentCheckoutPlan, 
+                        price: currentCheckoutPrice,
                         product: 'canvaspro'
                     })
                 });
 
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+                console.log('📥 Checkout response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Checkout error response:', errorText);
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
                 const data = await response.json();
+                console.log('📦 Checkout data:', data);
 
                 if (data.url) {
+                    console.log('🔗 Redirecting to Stripe checkout...');
                     // Redirect to Stripe checkout
                     window.location.href = data.url;
                 } else if (data.testMode) {
                     // Test mode - show the license directly
-                    alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
-                    closeEmailModal();
+                    alert(`✅ Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
                 } else {
-                    alert('Error creating checkout session. Please try again.');
-                    if (btn) {
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
+                    throw new Error(data.error || 'Unknown error creating checkout session');
                 }
             } catch (error) {
-                console.error('Checkout error:', error);
-                alert('Connection error. Please check your internet connection and try again.');
+                console.error('💥 Stripe checkout error:', error);
                 
-                // Reset button
-                if (btn) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
+                if (error.message === 'Payment request timeout') {
+                    alert(`⏱️ Payment Request Timeout\n\nThe server is taking too long to respond. Please:\n1. Check your internet connection\n2. Try again in a few moments\n3. Contact support if the issue persists`);
+                } else {
+                    alert(`❌ Payment Error: ${error.message}\n\nPlease try again or contact support if the issue persists.`);
                 }
             }
+        }
+
+        // Process crypto payment
+        async function processCryptoPayment(email) {
+            // For now, crypto payments aren't implemented in the backend
+            // Fall back to Stripe or show message
+            alert('🚧 Crypto payments are coming soon!\n\nPlease use credit/debit card for now.');
+            
+            // Automatically select Stripe and proceed
+            currentPaymentMethod = 'stripe';
+            await processStripePayment(email);
+        }
+
+        // Proceed with verification (from verification modal)
+        function proceedWithVerification() {
+            const input = document.getElementById('verificationInput');
+            const error = document.getElementById('verificationError');
+            const verification = input.value.trim();
+
+            if (!verification || verification.length < 4) {
+                error.classList.add('show');
+                input.style.borderColor = '#ef4444';
+                return;
+            }
+
+            // Hide error if shown
+            error.classList.remove('show');
+            input.style.borderColor = '';
+
+            // Close verification modal and proceed with lookup
+            closeVerificationModal();
+            performLookup(currentLookupEmail, verification);
         }
 
         // Order lookup function
@@ -1029,26 +1393,44 @@
             }
 
             // Check if it's an email and needs verification
-            let verification = null;
             if (lookup.includes('@')) {
-                verification = prompt('For security, please enter the last 4 characters of your license key or order number:');
-                if (!verification || verification.length < 4) {
-                    resultDiv.innerHTML = `
-                        <div style="color: #ef4444;">
-                            <h3>❌ Verification Required</h3>
-                            <p style="margin-top: 15px; color: #aaa;">For email lookups, you must provide the last 4 characters of your license key for security.</p>
-                        </div>
-                    `;
-                    resultDiv.classList.add('show');
-                    return;
-                }
+                showVerificationModal(lookup);
+                return;
             }
+
+            // If it's a full license key, proceed directly
+            performLookup(lookup, null);
+        }
+
+        // Perform the actual lookup - FIXED timeout handling
+        async function performLookup(lookup, verification) {
+            const resultDiv = document.getElementById('lookupResult');
 
             resultDiv.innerHTML = '<div class="loading"></div> Searching...';
             resultDiv.classList.add('show');
 
+            console.log('🔍 Performing lookup:', { lookup: lookup.includes('@') ? 'email' : 'license', verification: !!verification });
+
+            // Check connection first
+            const isOnline = await checkConnection();
+            if (!isOnline) {
+                resultDiv.innerHTML = `
+                    <div style="color: #ef4444;">
+                        <h3>❌ Connection Error</h3>
+                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server at:<br><code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code></p>
+                        <p style="margin-top: 10px; color: #aaa;">Please check your internet connection and try again.</p>
+                    </div>
+                `;
+                return;
+            }
+
             try {
-                const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
+                // Simple timeout without AbortController
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Lookup request timeout')), 10000)
+                );
+
+                const fetchPromise = fetch(`${BACKEND_URL}/api/client/lookup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -1057,11 +1439,18 @@
                     })
                 });
 
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+                console.log('📥 Lookup response:', response.status);
+
                 if (!response.ok) {
-                    throw new Error('Server error');
+                    const errorText = await response.text();
+                    console.error('❌ Lookup error:', errorText);
+                    throw new Error(`Server error: ${response.status}`);
                 }
 
                 const data = await response.json();
+                console.log('📦 Lookup data:', data);
 
                 if (data.found) {
                     const order = data.order;
@@ -1097,13 +1486,24 @@
                     `;
                 }
             } catch (error) {
-                console.error('Lookup error:', error);
-                resultDiv.innerHTML = `
-                    <div style="color: #ef4444;">
-                        <h3>❌ Connection Error</h3>
-                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please check if the backend is running at:<br><code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code></p>
-                    </div>
-                `;
+                console.error('💥 Lookup error:', error);
+                
+                if (error.message === 'Lookup request timeout') {
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444;">
+                            <h3>⏱️ Request Timeout</h3>
+                            <p style="margin-top: 15px; color: #aaa;">The server is taking too long to respond. Please check your connection and try again.</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444;">
+                            <h3>❌ Connection Error</h3>
+                            <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Error: ${error.message}</p>
+                            <p style="margin-top: 10px; color: #aaa;">Please try again later or contact support.</p>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -1149,19 +1549,42 @@
             }
         });
 
+        // Enter key support for verification modal
+        document.getElementById('verificationInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                proceedWithVerification();
+            }
+        });
+
         // Close modal on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeEmailModal();
+                closeVerificationModal();
+                closePaymentModal();
             }
         });
 
-        // Close modal on background click
+        // Close modals on background click
         document.getElementById('emailModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeEmailModal();
             }
         });
+
+        document.getElementById('verificationModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeVerificationModal();
+            }
+        });
+
+        document.getElementById('paymentModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePaymentModal();
+            }
+        });
+
+
     </script>
 </body>
 </html>
