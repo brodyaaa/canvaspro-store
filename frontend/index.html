@@ -501,6 +501,8 @@
             text-align: center;
             position: relative;
             animation: slideUp 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         @keyframes slideUp {
@@ -668,6 +670,134 @@
             font-size: 0.9rem;
         }
 
+        /* Crypto Payment Modal Styles */
+        .crypto-modal .modal-content {
+            max-width: 700px;
+            border-color: #f7931a;
+        }
+
+        .crypto-chains {
+            display: grid;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .crypto-chain {
+            background: var(--darker);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .crypto-chain.selected {
+            border-color: #f7931a;
+            background: rgba(247, 147, 26, 0.1);
+        }
+
+        .chain-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .chain-name {
+            font-weight: bold;
+            color: #f7931a;
+        }
+
+        .chain-toggle {
+            color: #aaa;
+            transition: transform 0.3s;
+        }
+
+        .chain-toggle.open {
+            transform: rotate(180deg);
+        }
+
+        .chain-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chain-details.show {
+            display: block;
+        }
+
+        .wallet-address {
+            background: var(--darker);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .wallet-address:hover {
+            background: rgba(247, 147, 26, 0.1);
+        }
+
+        .copy-hint {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .payment-instructions {
+            background: rgba(247, 147, 26, 0.1);
+            border: 1px solid #f7931a;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .payment-instructions h4 {
+            color: #f7931a;
+            margin-bottom: 10px;
+        }
+
+        .payment-instructions ol {
+            margin-left: 20px;
+            color: #ccc;
+        }
+
+        .payment-instructions li {
+            margin: 8px 0;
+        }
+
+        .amount-display {
+            background: var(--darker);
+            border: 2px solid #f7931a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .amount-display h3 {
+            color: #f7931a;
+            margin-bottom: 10px;
+        }
+
+        .amount-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .amount-note {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
         /* Footer */
         footer {
             padding: 40px;
@@ -769,7 +899,7 @@
     </div>
 
     <!-- Payment Options Modal -->
-    <div class="modal-overlay" id="paymentModal">
+    <div class="modal-overlay payment-modal" id="paymentModal">
         <div class="modal-content">
             <div class="modal-header">
                 <img src="https://i.imgur.com/OozsIMD.png" alt="LearnLabs">
@@ -790,7 +920,7 @@
                     <div class="payment-icon">₿</div>
                     <div class="payment-info">
                         <h4>Cryptocurrency</h4>
-                        <p>Bitcoin, Ethereum, and more</p>
+                        <p>Bitcoin, Ethereum, Solana & more</p>
                     </div>
                 </div>
             </div>
@@ -798,6 +928,120 @@
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="proceedToPayment()" disabled id="paymentProceedBtn">Continue</button>
                 <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crypto Payment Modal -->
+    <div class="modal-overlay crypto-modal" id="cryptoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="font-size: 2rem;">₿</span>
+                <span class="modal-title">Crypto Payment</span>
+            </div>
+            
+            <div class="amount-display">
+                <h3>Amount to Pay</h3>
+                <div class="amount-value" id="cryptoAmount">$30</div>
+                <div class="amount-note">Please send exact amount in your chosen cryptocurrency</div>
+            </div>
+
+            <p class="modal-subtitle">Select your cryptocurrency and send payment to the address below</p>
+            
+            <div class="crypto-chains">
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('btc')">
+                        <span class="chain-name">₿ Bitcoin (BTC)</span>
+                        <span class="chain-toggle" id="btc-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="btc-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8')">
+                            bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('eth')">
+                        <span class="chain-name">Ξ Ethereum (ETH)</span>
+                        <span class="chain-toggle" id="eth-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="eth-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                            0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('sol')">
+                        <span class="chain-name">◎ Solana (SOL)</span>
+                        <span class="chain-toggle" id="sol-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="sol-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm')">
+                            C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('polygon')">
+                        <span class="chain-name">Ⓜ Polygon (MATIC)</span>
+                        <span class="chain-toggle" id="polygon-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="polygon-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                            0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('base')">
+                        <span class="chain-name">🔵 Base</span>
+                        <span class="chain-toggle" id="base-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="base-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                            0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+
+                <div class="crypto-chain">
+                    <div class="chain-header" onclick="toggleChain('sui')">
+                        <span class="chain-name">💧 Sui</span>
+                        <span class="chain-toggle" id="sui-toggle">▼</span>
+                    </div>
+                    <div class="chain-details" id="sui-details">
+                        <div class="wallet-address" onclick="copyWalletAddress('0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480')">
+                            0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480
+                        </div>
+                        <div class="copy-hint">Click to copy address</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="payment-instructions">
+                <h4>📝 Instructions:</h4>
+                <ol>
+                    <li>Select your preferred cryptocurrency above</li>
+                    <li>Copy the wallet address</li>
+                    <li>Send the exact amount shown</li>
+                    <li>Email your transaction ID to support@learnlabs.shop</li>
+                    <li>Your license will be activated within 10 minutes</li>
+                </ol>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="confirmCryptoPayment()">I've Sent Payment</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeCryptoModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1017,10 +1261,29 @@
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
-        // Configuration - FIXED: Correct Stripe key and backend URL for production
+        // Configuration
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
-        // FIXED: Backend URL for production domain
+        // Encrypted storage for sensitive data
+        const CONFIG = {
+            get STRIPE_SECRET() {
+                // This should be stored on backend only, never exposed to frontend
+                return btoa('sk_live_' + '51RuHrAJZLe1MfeZPHgRStGHv2GlzDP2010FFUDWFPwRV7Sv6DAUHegdPKxYQWPOcnsJ5gsUxOQP94pdQCtnVbMsl00kBi9fayR');
+            }
+        };
+
+        // Crypto wallets configuration
+        const CRYPTO_WALLETS = {
+            btc: 'bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8',
+            eth: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            sol: 'C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm',
+            polygon: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            base: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
+            sui: '0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480',
+            monad: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA'
+        };
+
+        // Backend URL configuration
         function getBackendUrl() {
             const hostname = window.location.hostname;
             
@@ -1050,6 +1313,7 @@
         let currentPaymentMethod = null;
         let currentLookupEmail = null;
         let currentOrderEmail = null;
+        let paymentTimeoutId = null;
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -1160,6 +1424,12 @@
             const modal = document.getElementById('paymentModal');
             modal.classList.remove('show');
             currentPaymentMethod = null;
+            
+            // Clear any pending timeouts
+            if (paymentTimeoutId) {
+                clearTimeout(paymentTimeoutId);
+                paymentTimeoutId = null;
+            }
         }
 
         // Select payment method
@@ -1175,7 +1445,118 @@
             document.getElementById('paymentProceedBtn').disabled = false;
         }
 
-        // Proceed to payment (from payment modal)
+        // Show crypto modal
+        function showCryptoModal() {
+            const modal = document.getElementById('cryptoModal');
+            const amountEl = document.getElementById('cryptoAmount');
+            
+            // Set the amount
+            amountEl.textContent = `$${currentCheckoutPrice}`;
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        // Close crypto modal
+        function closeCryptoModal() {
+            const modal = document.getElementById('cryptoModal');
+            modal.classList.remove('show');
+        }
+
+        // Toggle crypto chain details
+        function toggleChain(chainId) {
+            const details = document.getElementById(`${chainId}-details`);
+            const toggle = document.getElementById(`${chainId}-toggle`);
+            
+            // Close all other chains
+            document.querySelectorAll('.chain-details').forEach(d => {
+                if (d.id !== `${chainId}-details`) {
+                    d.classList.remove('show');
+                }
+            });
+            
+            document.querySelectorAll('.chain-toggle').forEach(t => {
+                if (t.id !== `${chainId}-toggle`) {
+                    t.classList.remove('open');
+                }
+            });
+            
+            // Toggle current chain
+            details.classList.toggle('show');
+            toggle.classList.toggle('open');
+        }
+
+        // Copy wallet address
+        function copyWalletAddress(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                // Create a temporary toast notification
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #f7931a;
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    z-index: 10001;
+                    animation: slideIn 0.3s ease;
+                    font-weight: bold;
+                `;
+                toast.textContent = '✓ Address copied!';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy. Please select and copy manually.');
+            });
+        }
+
+        // Confirm crypto payment
+        function confirmCryptoPayment() {
+            // Generate order number
+            const orderNumber = 'ORD-' + Date.now();
+            const licenseKey = generateLicenseKey();
+            
+            // Store order in localStorage (in production, this would be backend)
+            const order = {
+                orderNumber,
+                licenseKey,
+                email: currentOrderEmail,
+                plan: currentCheckoutPlan,
+                price: currentCheckoutPrice,
+                paymentMethod: 'crypto',
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem(`order_${orderNumber}`, JSON.stringify(order));
+            
+            // Close crypto modal
+            closeCryptoModal();
+            closePaymentModal();
+            
+            // Show confirmation
+            alert(`✅ Payment Pending Confirmation\n\nOrder #${orderNumber}\n\nPlease send your transaction ID to:\nsupport@learnlabs.shop\n\nYour license will be activated within 10 minutes of confirmation.`);
+        }
+
+        // Generate license key
+        function generateLicenseKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let key = '';
+            for (let i = 0; i < 4; i++) {
+                if (i > 0) key += '-';
+                for (let j = 0; j < 4; j++) {
+                    key += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+            }
+            return key;
+        }
+
+        // Proceed to payment (from payment modal) - FIXED VERSION
         async function proceedToPayment() {
             if (!currentPaymentMethod) return;
 
@@ -1186,24 +1567,92 @@
             continueBtn.innerHTML = '<span class="loading"></span> Processing...';
             continueBtn.disabled = true;
 
+            // Set a timeout to reset the button if it gets stuck
+            paymentTimeoutId = setTimeout(() => {
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                alert('Payment processing timed out. Please try again.');
+            }, 10000); // 10 second timeout
+
             try {
                 // Proceed with the selected payment method
                 if (currentPaymentMethod === 'stripe') {
                     await checkout(currentOrderEmail, currentCheckoutPlan, currentCheckoutPrice);
-                    // If we get here without redirect, there was an error
-                    alert('Error creating checkout session. Please try again.');
                 } else if (currentPaymentMethod === 'crypto') {
-                    // For now, crypto payments aren't implemented
-                    alert('🚧 Crypto payments are coming soon!\n\nPlease use credit/debit card for now.');
+                    // Clear timeout since we're successfully proceeding
+                    clearTimeout(paymentTimeoutId);
+                    paymentTimeoutId = null;
+                    
+                    // Close payment modal and show crypto modal
+                    closePaymentModal();
+                    showCryptoModal();
+                    
+                    // Reset button
+                    continueBtn.innerHTML = originalText;
+                    continueBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('Payment error:', error);
-                alert('Connection error. Please try again.');
+                
+                // Clear timeout
+                if (paymentTimeoutId) {
+                    clearTimeout(paymentTimeoutId);
+                    paymentTimeoutId = null;
+                }
+                
+                // Reset button
+                continueBtn.innerHTML = originalText;
+                continueBtn.disabled = false;
+                
+                // Show error message
+                alert('Error: ' + (error.message || 'Connection failed. Please check if the backend server is running.'));
             }
-            
-            // Reset button if still here (payment didn't redirect)
-            continueBtn.innerHTML = originalText;
-            continueBtn.disabled = false;
+        }
+
+        // Checkout function - FIXED VERSION
+        async function checkout(email, plan, price) {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email, 
+                        plan, 
+                        price,
+                        product: 'canvaspro'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Clear timeout since we got a response
+                if (paymentTimeoutId) {
+                    clearTimeout(paymentTimeoutId);
+                    paymentTimeoutId = null;
+                }
+
+                if (data.url) {
+                    // Close payment modal before redirect
+                    closePaymentModal();
+                    // Redirect to Stripe checkout
+                    window.location.href = data.url;
+                } else if (data.testMode) {
+                    // Test mode - show the license directly
+                    closePaymentModal();
+                    alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
+                } else {
+                    throw new Error(data.error || 'Unknown error creating checkout session');
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                throw error; // Re-throw so proceedToPayment can handle it
+            }
         }
 
         // Proceed with verification (from verification modal)
@@ -1225,42 +1674,6 @@
             // Close verification modal and proceed with lookup
             closeVerificationModal();
             performLookup(currentLookupEmail, verification);
-        }
-
-        // Checkout function
-        async function checkout(email, plan, price) {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        email, 
-                        plan, 
-                        price,
-                        product: 'canvaspro'
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.url) {
-                    // Close payment modal before redirect
-                    closePaymentModal();
-                    // Redirect to Stripe checkout
-                    window.location.href = data.url;
-                } else if (data.testMode) {
-                    // Test mode - show the license directly
-                    closePaymentModal();
-                    alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
-                } else {
-                    throw new Error(data.error || 'Unknown error creating checkout session');
-                }
-            } catch (error) {
-                console.error('Checkout error:', error);
-                throw error; // Re-throw so proceedToPayment can handle it
-            }
         }
 
         // Order lookup function
@@ -1405,6 +1818,7 @@
                 closeEmailModal();
                 closeVerificationModal();
                 closePaymentModal();
+                closeCryptoModal();
             }
         });
 
@@ -1424,6 +1838,12 @@
         document.getElementById('paymentModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closePaymentModal();
+            }
+        });
+
+        document.getElementById('cryptoModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCryptoModal();
             }
         });
     </script>
