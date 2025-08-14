@@ -1375,13 +1375,20 @@
         // Initialize Stripe (will be set after loading)
         let stripe = null;
 
-        // Store current checkout info
+        // Store current checkout info - MAKE THESE PERSISTENT
         let currentCheckoutPlan = null;
         let currentCheckoutPrice = null;
         let currentPaymentMethod = null;
         let currentLookupEmail = null;
         let currentOrderEmail = null;
         let paymentTimeoutId = null;
+        
+        // BACKUP STORAGE FOR CHECKOUT DATA
+        const checkoutData = {
+            plan: null,
+            price: null,
+            email: null
+        };
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1579,12 +1586,22 @@
         function showEmailModal(plan, price) {
             console.log('showEmailModal called with:', { plan, price });
             
+            // Store in both places for redundancy
             currentCheckoutPlan = plan;
             currentCheckoutPrice = price;
             
+            // BACKUP STORAGE
+            checkoutData.plan = plan;
+            checkoutData.price = price;
+            
+            // Also store in sessionStorage as extra backup
+            sessionStorage.setItem('checkoutPlan', plan);
+            sessionStorage.setItem('checkoutPrice', String(price));
+            
             console.log('Set checkout values to:', { 
                 currentCheckoutPlan, 
-                currentCheckoutPrice 
+                currentCheckoutPrice,
+                backup: checkoutData
             });
             
             const modal = document.getElementById('emailModal');
@@ -1618,6 +1635,16 @@
             currentOrderEmail = null;
             currentPaymentMethod = null;
             
+            // Clear backup storage
+            checkoutData.plan = null;
+            checkoutData.price = null;
+            checkoutData.email = null;
+            
+            // Clear sessionStorage
+            sessionStorage.removeItem('checkoutPlan');
+            sessionStorage.removeItem('checkoutPrice');
+            sessionStorage.removeItem('checkoutEmail');
+            
             // Close all modals
             closeEmailModal();
             closePaymentModal();
@@ -1647,8 +1674,17 @@
             error.classList.remove('show');
             input.style.borderColor = '';
 
-            // Store email for later use
+            // Store email for later use in multiple places
             currentOrderEmail = email;
+            checkoutData.email = email;
+            sessionStorage.setItem('checkoutEmail', email);
+            
+            console.log('Email stored, current checkout state:', {
+                currentCheckoutPlan,
+                currentCheckoutPrice,
+                currentOrderEmail,
+                checkoutData
+            });
 
             // Close email modal and show payment options
             closeEmailModal();
@@ -1848,6 +1884,16 @@
             const continueBtn = document.getElementById('paymentProceedBtn');
             const originalText = continueBtn.innerHTML;
             
+            // CRITICAL FIX: Ensure we have the checkout data
+            if (!currentCheckoutPlan || currentCheckoutPrice === null || currentCheckoutPrice === undefined) {
+                console.error('CRITICAL ERROR: Lost checkout data!');
+                console.error('currentCheckoutPlan:', currentCheckoutPlan);
+                console.error('currentCheckoutPrice:', currentCheckoutPrice);
+                alert('Error: Lost pricing information. Please select your plan again.');
+                cancelCheckout();
+                return;
+            }
+            
             // Show processing state
             continueBtn.innerHTML = '<span class="loading"></span> Processing...';
             continueBtn.disabled = true;
@@ -1885,6 +1931,17 @@
                 // Proceed with the selected payment method
                 if (currentPaymentMethod === 'stripe') {
                     console.log('Initiating Stripe checkout...');
+                    console.log('About to call checkout with:', {
+                        email: currentOrderEmail,
+                        plan: currentCheckoutPlan,
+                        price: currentCheckoutPrice
+                    });
+                    
+                    // ENSURE VALUES ARE PASSED CORRECTLY
+                    if (!currentCheckoutPlan || currentCheckoutPrice === null || currentCheckoutPrice === undefined) {
+                        throw new Error('Checkout data was lost. Please try again.');
+                    }
+                    
                     await checkout(currentOrderEmail, currentCheckoutPlan, currentCheckoutPrice);
                 } else if (currentPaymentMethod === 'crypto') {
                     // Close payment modal and show crypto modal
@@ -1913,13 +1970,32 @@
             console.log('Current stored values:', { 
                 currentCheckoutPlan, 
                 currentCheckoutPrice,
-                currentOrderEmail 
+                currentOrderEmail,
+                checkoutData,
+                sessionStorage: {
+                    plan: sessionStorage.getItem('checkoutPlan'),
+                    price: sessionStorage.getItem('checkoutPrice')
+                }
+            });
+            
+            // USE ALL BACKUP SOURCES TO GET THE VALUES
+            const finalPlan = plan || currentCheckoutPlan || checkoutData.plan || sessionStorage.getItem('checkoutPlan');
+            const finalPrice = (price !== undefined && price !== null) ? price : 
+                              (currentCheckoutPrice !== null ? currentCheckoutPrice : 
+                              (checkoutData.price !== null ? checkoutData.price : 
+                              Number(sessionStorage.getItem('checkoutPrice'))));
+            const finalEmail = email || currentOrderEmail || checkoutData.email;
+            
+            console.log('Final values to send:', { 
+                email: finalEmail,
+                plan: finalPlan, 
+                price: finalPrice 
             });
             
             // Validate parameters
-            if (!plan || price === null || price === undefined) {
-                console.error('Missing plan or price!', { plan, price });
-                throw new Error('Invalid checkout parameters. Please try again.');
+            if (!finalPlan || finalPrice === null || finalPrice === undefined || isNaN(finalPrice)) {
+                console.error('Missing plan or price!', { finalPlan, finalPrice });
+                throw new Error('Invalid checkout parameters. Please select a plan and try again.');
             }
             
             // Check if Stripe is loaded
@@ -1942,9 +2018,9 @@
                     mode: 'cors',
                     credentials: 'omit',
                     body: JSON.stringify({ 
-                        email, 
-                        plan, 
-                        price,
+                        email: finalEmail, 
+                        plan: finalPlan, 
+                        price: finalPrice,
                         product: 'canvaspro'
                     }),
                     signal: AbortSignal.timeout(30000)  // Increased to 30 seconds
