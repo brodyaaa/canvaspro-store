@@ -1560,7 +1560,7 @@
             return key;
         }
 
-        // Proceed to payment (from payment modal) - FIXED VERSION
+        // Proceed to payment (from payment modal) - ENHANCED DEBUG VERSION
         async function proceedToPayment() {
             if (!currentPaymentMethod) return;
 
@@ -1571,16 +1571,22 @@
             continueBtn.innerHTML = '<span class="loading"></span> Processing...';
             continueBtn.disabled = true;
 
+            console.log('Starting payment process...');
+            console.log('Payment method:', currentPaymentMethod);
+            console.log('Backend URL:', BACKEND_URL);
+
             // Set a timeout to reset the button if it gets stuck
             paymentTimeoutId = setTimeout(() => {
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
-                alert('Payment processing timed out. Please try again.');
-            }, 10000); // 10 second timeout
+                alert('Payment timeout. The backend might be sleeping. Click OK to try waking it up.');
+                window.open(BACKEND_URL + '/api/health', '_blank');
+            }, 15000); // 15 second timeout
 
             try {
                 // Proceed with the selected payment method
                 if (currentPaymentMethod === 'stripe') {
+                    console.log('Initiating Stripe checkout...');
                     await checkout(currentOrderEmail, currentCheckoutPlan, currentCheckoutPrice);
                 } else if (currentPaymentMethod === 'crypto') {
                     // Clear timeout since we're successfully proceeding
@@ -1596,7 +1602,7 @@
                     continueBtn.disabled = false;
                 }
             } catch (error) {
-                console.error('Payment error:', error);
+                console.error('Payment error details:', error);
                 
                 // Clear timeout
                 if (paymentTimeoutId) {
@@ -1608,31 +1614,61 @@
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
                 
-                // Show error message
-                alert('Error: ' + (error.message || 'Connection failed. Please check if the backend server is running.'));
+                // More detailed error message
+                let errorMsg = 'Payment Error:\n\n';
+                if (error.message.includes('Backend server is not reachable')) {
+                    errorMsg += 'The backend server is not responding. This usually means:\n';
+                    errorMsg += '1. The Replit server is sleeping (most likely)\n';
+                    errorMsg += '2. CORS is blocking the request\n\n';
+                    errorMsg += 'Click OK to open the backend in a new tab to wake it up.';
+                    alert(errorMsg);
+                    window.open(BACKEND_URL + '/api/health', '_blank');
+                } else {
+                    errorMsg += error.message;
+                    alert(errorMsg);
+                }
             }
         }
 
-        // Checkout function - IMPROVED ERROR HANDLING
+        // Checkout function - FULL DEBUG VERSION
         async function checkout(email, plan, price) {
+            console.log('Checkout function called with:', { email, plan, price });
+            console.log('Backend URL:', BACKEND_URL);
+            
             try {
-                // Test if backend is reachable first
-                const testResponse = await fetch(`${BACKEND_URL}/api/health`, {
+                // First, wake up the backend if needed
+                console.log('Testing backend health...');
+                const healthResponse = await fetch(`${BACKEND_URL}/api/health`, {
                     method: 'GET',
-                    mode: 'cors'
-                }).catch(() => null);
+                    mode: 'cors',
+                    credentials: 'omit'
+                }).catch(err => {
+                    console.error('Health check failed:', err);
+                    return null;
+                });
 
-                if (!testResponse || !testResponse.ok) {
-                    throw new Error('Backend server is not reachable. Please ensure the server is running.');
+                if (!healthResponse) {
+                    console.error('Backend is not responding at all');
+                    throw new Error('Backend server is not reachable. The Replit server is likely sleeping.');
                 }
 
+                const healthData = await healthResponse.json();
+                console.log('Backend health response:', healthData);
+
+                if (!healthData.configured) {
+                    throw new Error('Backend is running but Stripe is not configured. Check Replit secrets.');
+                }
+
+                // Now create the checkout session
+                console.log('Creating checkout session...');
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
                     headers: { 
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     mode: 'cors',
-                    credentials: 'include',
+                    credentials: 'omit',
                     body: JSON.stringify({ 
                         email, 
                         plan, 
@@ -1641,12 +1677,16 @@
                     })
                 });
 
+                console.log('Checkout response status:', response.status);
+                
                 if (!response.ok) {
                     const errorText = await response.text();
+                    console.error('Checkout error response:', errorText);
                     throw new Error(`Server error (${response.status}): ${errorText}`);
                 }
 
                 const data = await response.json();
+                console.log('Checkout response data:', data);
 
                 // Clear timeout since we got a response
                 if (paymentTimeoutId) {
@@ -1655,19 +1695,25 @@
                 }
 
                 if (data.url) {
+                    console.log('Got Stripe URL, redirecting to:', data.url);
                     // Close payment modal before redirect
                     closePaymentModal();
-                    // Redirect to Stripe checkout
-                    window.location.href = data.url;
+                    // Small delay to ensure modal closes
+                    setTimeout(() => {
+                        window.location.href = data.url;
+                    }, 100);
                 } else if (data.testMode) {
                     // Test mode - show the license directly
+                    console.log('Running in test mode');
                     closePaymentModal();
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
                 } else {
-                    throw new Error(data.error || 'Unknown error creating checkout session');
+                    console.error('No URL in response:', data);
+                    throw new Error(data.error || 'No checkout URL received from server');
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
+                console.error('Error stack:', error.stack);
                 throw error; // Re-throw so proceedToPayment can handle it
             }
         }
@@ -1891,6 +1937,62 @@
                 closeCryptoModal();
             }
         });
+
+        // DEBUG FUNCTION - Run this in browser console to test Stripe
+        window.debugStripe = async function() {
+            console.log('=== STRIPE DEBUG TEST ===');
+            console.log('Backend URL:', BACKEND_URL);
+            
+            try {
+                // 1. Test backend health
+                console.log('\n1. Testing backend health...');
+                const healthRes = await fetch(`${BACKEND_URL}/api/health`);
+                const health = await healthRes.json();
+                console.log('Health response:', health);
+                
+                if (!health.configured) {
+                    console.error('❌ Backend not configured! Check Replit secrets.');
+                    return;
+                }
+                
+                // 2. Test checkout creation
+                console.log('\n2. Testing checkout creation...');
+                const checkoutRes = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@debug.com',
+                        plan: 'test',
+                        price: 1,
+                        product: 'canvaspro'
+                    })
+                });
+                
+                console.log('Checkout status:', checkoutRes.status);
+                const checkoutData = await checkoutRes.json();
+                console.log('Checkout response:', checkoutData);
+                
+                if (checkoutData.url) {
+                    console.log('✅ STRIPE IS WORKING!');
+                    console.log('Checkout URL:', checkoutData.url);
+                    console.log('You can open this URL to test:', checkoutData.url);
+                } else if (checkoutData.testMode) {
+                    console.log('⚠️ Running in TEST MODE - Stripe not configured');
+                    console.log('Test license:', checkoutData.license);
+                } else {
+                    console.error('❌ Error:', checkoutData);
+                }
+                
+            } catch (error) {
+                console.error('❌ Debug test failed:', error);
+                console.error('This usually means the backend is sleeping or unreachable.');
+                console.log('Try opening this URL to wake it up:', BACKEND_URL);
+            }
+            
+            console.log('\n=== END DEBUG TEST ===');
+        };
+        
+        console.log('LearnLabs loaded. Run debugStripe() in console to test Stripe connection.');
     </script>
 </body>
 </html>
