@@ -601,6 +601,73 @@
             display: block;
         }
 
+        /* Verification Modal Specific Styles */
+        .verification-modal .modal-content {
+            border-color: var(--blue);
+        }
+
+        .verification-modal .modal-title {
+            color: var(--blue);
+        }
+
+        .verification-modal .modal-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .verification-modal .modal-btn-primary {
+            background: linear-gradient(135deg, var(--blue) 0%, #2563eb 100%);
+        }
+
+        /* Payment Options Modal */
+        .payment-modal .modal-content {
+            max-width: 600px;
+        }
+
+        .payment-options {
+            display: grid;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .payment-option {
+            background: var(--darker);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .payment-option:hover {
+            border-color: var(--primary);
+            background: rgba(255, 102, 51, 0.05);
+        }
+
+        .payment-option.selected {
+            border-color: var(--primary);
+            background: rgba(255, 102, 51, 0.1);
+        }
+
+        .payment-icon {
+            font-size: 2rem;
+            width: 50px;
+            text-align: center;
+        }
+
+        .payment-info h4 {
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .payment-info p {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
         /* Footer */
         footer {
             padding: 40px;
@@ -673,6 +740,64 @@
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="proceedWithCheckout()">Continue</button>
                 <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div class="modal-overlay verification-modal" id="verificationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="font-size: 2rem;">🔐</span>
+                <span class="modal-title">Security Verification</span>
+            </div>
+            <p class="modal-subtitle">For security, please enter the last 4 characters of your license key or order number</p>
+            
+            <input type="text" 
+                   class="modal-input" 
+                   id="verificationInput" 
+                   placeholder="Last 4 characters"
+                   maxlength="4">
+            
+            <div class="error-message" id="verificationError">Please enter the last 4 characters</div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="proceedWithVerification()">Verify</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeVerificationModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Options Modal -->
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <img src="https://i.imgur.com/OozsIMD.png" alt="LearnLabs">
+                <span class="modal-title">Choose Payment Method</span>
+            </div>
+            <p class="modal-subtitle">Select your preferred payment option</p>
+            
+            <div class="payment-options">
+                <div class="payment-option" onclick="selectPaymentMethod('stripe')">
+                    <div class="payment-icon">💳</div>
+                    <div class="payment-info">
+                        <h4>Credit/Debit Card</h4>
+                        <p>Secure payment via Stripe</p>
+                    </div>
+                </div>
+                
+                <div class="payment-option" onclick="selectPaymentMethod('crypto')">
+                    <div class="payment-icon">₿</div>
+                    <div class="payment-info">
+                        <h4>Cryptocurrency</h4>
+                        <p>Bitcoin, Ethereum, and more</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="proceedToPayment()" disabled id="paymentProceedBtn">Continue</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -922,6 +1047,8 @@
         // Store current checkout info
         let currentCheckoutPlan = null;
         let currentCheckoutPrice = null;
+        let currentPaymentMethod = null;
+        let currentLookupEmail = null;
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -959,7 +1086,7 @@
             return re.test(email);
         }
 
-        // Proceed with checkout
+        // Proceed with checkout (from email modal)
         async function proceedWithCheckout() {
             const input = document.getElementById('modalEmailInput');
             const error = document.getElementById('emailError');
@@ -976,23 +1103,117 @@
             error.classList.remove('show');
             input.style.borderColor = '';
 
-            // Proceed with checkout
-            await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
-            
-            // Close modal
+            // Close email modal and show payment options
             closeEmailModal();
+            showPaymentModal();
         }
 
-        // Checkout function - FIXED for Stripe redirect
-        async function checkout(email, plan, price) {
-            const btn = document.querySelector('.modal-btn-primary');
-            const originalText = btn ? btn.innerHTML : 'Continue';
+        // Show verification modal
+        function showVerificationModal(email) {
+            currentLookupEmail = email;
             
-            if (btn) {
-                btn.innerHTML = '<span class="loading"></span> Processing...';
-                btn.disabled = true;
+            const modal = document.getElementById('verificationModal');
+            const input = document.getElementById('verificationInput');
+            const error = document.getElementById('verificationError');
+            
+            // Reset modal state
+            input.value = '';
+            error.classList.remove('show');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Focus input after animation
+            setTimeout(() => {
+                input.focus();
+            }, 300);
+        }
+
+        // Close verification modal
+        function closeVerificationModal() {
+            const modal = document.getElementById('verificationModal');
+            modal.classList.remove('show');
+            currentLookupEmail = null;
+        }
+
+        // Show payment modal
+        function showPaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            
+            // Reset payment selection
+            currentPaymentMethod = null;
+            document.querySelectorAll('.payment-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            document.getElementById('paymentProceedBtn').disabled = true;
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        // Close payment modal
+        function closePaymentModal() {
+            const modal = document.getElementById('paymentModal');
+            modal.classList.remove('show');
+            currentPaymentMethod = null;
+        }
+
+        // Select payment method
+        function selectPaymentMethod(method) {
+            currentPaymentMethod = method;
+            
+            // Update UI
+            document.querySelectorAll('.payment-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            event.currentTarget.classList.add('selected');
+            document.getElementById('paymentProceedBtn').disabled = false;
+        }
+
+        // Proceed to payment (from payment modal)
+        async function proceedToPayment() {
+            if (!currentPaymentMethod) return;
+
+            // Close payment modal
+            closePaymentModal();
+            
+            // Get email from the previous modal
+            const email = document.getElementById('modalEmailInput').value.trim();
+
+            // Proceed with the selected payment method
+            if (currentPaymentMethod === 'stripe') {
+                await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
+            } else if (currentPaymentMethod === 'crypto') {
+                // For now, crypto payments aren't implemented
+                alert('🚧 Crypto payments are coming soon!\n\nPlease use credit/debit card for now.');
+                showPaymentModal(); // Show payment modal again
+            }
+        }
+
+        // Proceed with verification (from verification modal)
+        function proceedWithVerification() {
+            const input = document.getElementById('verificationInput');
+            const error = document.getElementById('verificationError');
+            const verification = input.value.trim();
+
+            if (!verification || verification.length < 4) {
+                error.classList.add('show');
+                input.style.borderColor = '#ef4444';
+                return;
             }
 
+            // Hide error if shown
+            error.classList.remove('show');
+            input.style.borderColor = '';
+
+            // Close verification modal and proceed with lookup
+            closeVerificationModal();
+            performLookup(currentLookupEmail, verification);
+        }
+
+        // Checkout function
+        async function checkout(email, plan, price) {
             try {
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
@@ -1015,23 +1236,12 @@
                 } else if (data.testMode) {
                     // Test mode - show the license directly
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
-                    closeEmailModal();
                 } else {
                     alert('Error creating checkout session. Please try again.');
-                    if (btn) {
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
                 alert('Connection error. Please check your internet connection and try again.');
-                
-                // Reset button
-                if (btn) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
             }
         }
 
@@ -1046,20 +1256,18 @@
             }
 
             // Check if it's an email and needs verification
-            let verification = null;
             if (lookup.includes('@')) {
-                verification = prompt('For security, please enter the last 4 characters of your license key or order number:');
-                if (!verification || verification.length < 4) {
-                    resultDiv.innerHTML = `
-                        <div style="color: #ef4444;">
-                            <h3>❌ Verification Required</h3>
-                            <p style="margin-top: 15px; color: #aaa;">For email lookups, you must provide the last 4 characters of your license key for security.</p>
-                        </div>
-                    `;
-                    resultDiv.classList.add('show');
-                    return;
-                }
+                showVerificationModal(lookup);
+                return;
             }
+
+            // If it's a full license key, proceed directly
+            performLookup(lookup, null);
+        }
+
+        // Perform the actual lookup
+        async function performLookup(lookup, verification) {
+            const resultDiv = document.getElementById('lookupResult');
 
             resultDiv.innerHTML = '<div class="loading"></div> Searching...';
             resultDiv.classList.add('show');
@@ -1166,17 +1374,38 @@
             }
         });
 
+        // Enter key support for verification modal
+        document.getElementById('verificationInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                proceedWithVerification();
+            }
+        });
+
         // Close modal on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeEmailModal();
+                closeVerificationModal();
+                closePaymentModal();
             }
         });
 
-        // Close modal on background click
+        // Close modals on background click
         document.getElementById('emailModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeEmailModal();
+            }
+        });
+
+        document.getElementById('verificationModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeVerificationModal();
+            }
+        });
+
+        document.getElementById('paymentModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePaymentModal();
             }
         });
     </script>
