@@ -22,7 +22,6 @@
             --blue: #3b82f6;
             --green: #10b981;
             --gray: #6b7280;
-            --crypto-orange: #f7931a;
         }
 
         body {
@@ -467,7 +466,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Modal Base Styles */
+        /* Email Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -574,7 +573,7 @@
             color: white;
         }
 
-        .modal-btn-primary:hover:not(:disabled) {
+        .modal-btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(255, 102, 51, 0.3);
         }
@@ -588,96 +587,6 @@
         .modal-btn-secondary:hover {
             background: rgba(255, 255, 255, 0.05);
             color: white;
-        }
-
-        .modal-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Payment Method Modal Specific */
-        .payment-methods {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .payment-method-card {
-            flex: 1;
-            padding: 20px;
-            background: var(--darker);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .payment-method-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .payment-method-card.selected {
-            border-color: var(--primary);
-            background: rgba(255, 102, 51, 0.1);
-        }
-
-        .payment-method-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .payment-method-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: white;
-            margin-bottom: 5px;
-        }
-
-        .payment-method-desc {
-            font-size: 0.9rem;
-            color: #888;
-        }
-
-        /* Crypto Payment Info */
-        .crypto-info {
-            display: none;
-            background: var(--darker);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-            border: 1px solid rgba(247, 147, 26, 0.3);
-        }
-
-        .crypto-info.show {
-            display: block;
-        }
-
-        .crypto-address {
-            background: var(--dark);
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 0.8rem;
-            word-break: break-all;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .crypto-address:hover {
-            background: rgba(247, 147, 26, 0.1);
-        }
-
-        .crypto-warning {
-            color: #ffa366;
-            font-size: 0.85rem;
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(255, 163, 102, 0.1);
-            border-radius: 8px;
         }
 
         .error-message {
@@ -723,7 +632,6 @@
             .pricing-card.popular { transform: none; }
             .lookup-form { flex-direction: column; }
             .pricing-container { grid-template-columns: 1fr; }
-            .payment-methods { flex-direction: column; }
         }
 
         /* Loading Animation */
@@ -763,95 +671,8 @@
             <div class="error-message" id="emailError">Please enter a valid email address</div>
             
             <div class="modal-buttons">
-                <button type="button" class="modal-btn modal-btn-primary" id="emailContinueBtn" onclick="proceedToPaymentMethod()">Continue</button>
-                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Method Modal -->
-    <div class="modal-overlay" id="paymentMethodModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <img src="https://i.imgur.com/OozsIMD.png" alt="LearnLabs">
-                <span class="modal-title">Choose Payment Method</span>
-            </div>
-            <p class="modal-subtitle">Select how you'd like to pay for your <span id="selectedPlanDisplay"></span> plan</p>
-            
-            <div class="payment-methods">
-                <div class="payment-method-card" onclick="selectPaymentMethod('stripe')" id="stripeMethod">
-                    <div class="payment-method-icon">💳</div>
-                    <div class="payment-method-name">Card Payment</div>
-                    <div class="payment-method-desc">Secure payment via Stripe</div>
-                </div>
-                
-                <div class="payment-method-card" onclick="selectPaymentMethod('crypto')" id="cryptoMethod">
-                    <div class="payment-method-icon">₿</div>
-                    <div class="payment-method-name">Cryptocurrency</div>
-                    <div class="payment-method-desc">Pay with Bitcoin or ETH</div>
-                </div>
-            </div>
-
-            <div class="crypto-info" id="cryptoInfo">
-                <h4 style="color: var(--crypto-orange); margin-bottom: 15px;">📧 Send payment to any of these addresses:</h4>
-                
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #f7931a; font-size: 0.9rem; margin-bottom: 5px;">₿ Bitcoin (BTC):</div>
-                    <div class="crypto-address" onclick="copyToClipboard('bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8')">
-                        bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #627eea; font-size: 0.9rem; margin-bottom: 5px;">⟠ Ethereum (ETH):</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
-                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #14f195; font-size: 0.9rem; margin-bottom: 5px;">◎ Solana (SOL):</div>
-                    <div class="crypto-address" onclick="copyToClipboard('C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm')">
-                        C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #8247e5; font-size: 0.9rem; margin-bottom: 5px;">🟣 Polygon (MATIC):</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
-                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #0052ff; font-size: 0.9rem; margin-bottom: 5px;">🔵 Base:</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
-                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #4fc9da; font-size: 0.9rem; margin-bottom: 5px;">💧 Sui:</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480')">
-                        0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <div style="color: #7b3fe4; font-size: 0.9rem; margin-bottom: 5px;">🟪 Monad:</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
-                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
-                    </div>
-                </div>
-
-                <div class="crypto-warning">
-                    ⚠️ After sending payment, email proof of transaction to support@learnlabs.shop with your order details
-                </div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-primary" id="paymentContinueBtn" onclick="proceedWithPayment()" disabled>Select a Payment Method</button>
-                <button class="modal-btn modal-btn-secondary" onclick="backToEmail()">Back</button>
+                <button class="modal-btn modal-btn-primary" onclick="proceedWithCheckout()">Continue</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1071,63 +892,23 @@
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
-        // Configuration - ONLY PUBLIC KEYS (No secrets in frontend!)
+        // Configuration - FIX THE BACKEND URL HERE
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Q5Nc0RxWQL4Y9dFHlBVJzJWy9zBv3g1S7T1xQdYHgp5e6hJWj1EI6YsNZqr9xXIDJD5BSPDT9EJl3dWKwtJfrEa00BVfJzoQh';
+        
+        // YOUR REPLIT BACKEND URL - Make sure this is correct!
         const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
 
-        // Initialize Stripe with publishable key (safe for frontend)
+        // Initialize Stripe
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 
-        console.log('🚀 LearnLabs initialized');
-        console.log('Backend URL:', BACKEND_URL);
-        console.log('Frontend URL:', window.location.origin);
-
-        // Override window.onerror for better error catching
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            console.error('❌ Global Error Caught:');
-            console.error('Message:', msg);
-            console.error('Source:', url);
-            console.error('Line:', lineNo, 'Column:', columnNo);
-            console.error('Error object:', error);
-            return false;
-        };
-
-        // Global error handler
-        window.addEventListener('error', function(e) {
-            console.error('❌ JavaScript Error:', e.error);
-            console.error('At:', e.filename, 'Line:', e.lineno, 'Col:', e.colno);
-        });
-
         // Store current checkout info
-        let currentCheckoutData = {
-            email: null,
-            plan: null,
-            price: null,
-            paymentMethod: null
-        };
-        
-        // TEST FUNCTION - Type this in console to test: testPaymentFlow()
-        window.testPaymentFlow = function() {
-            console.log('🧪 TEST: Manually triggering payment flow');
-            currentCheckoutData = {
-                email: 'test@example.com',
-                plan: 'monthly',
-                price: 30,
-                paymentMethod: null
-            };
-            showPaymentMethodModal();
-        };
-        
-        console.log('💡 TIP: Type testPaymentFlow() in console to test the payment modal');
+        let currentCheckoutPlan = null;
+        let currentCheckoutPrice = null;
 
         // Show email modal
         function showEmailModal(plan, price) {
-            currentCheckoutData.plan = plan;
-            currentCheckoutData.price = price;
-            currentCheckoutData.email = null;
-            currentCheckoutData.paymentMethod = null;
-            
-            console.log('Opening email modal with plan:', plan, 'price:', price);
+            currentCheckoutPlan = plan;
+            currentCheckoutPrice = price;
             
             const modal = document.getElementById('emailModal');
             const input = document.getElementById('modalEmailInput');
@@ -1150,24 +931,18 @@
         function closeEmailModal() {
             const modal = document.getElementById('emailModal');
             modal.classList.remove('show');
-            currentCheckoutData = {
-                email: null,
-                plan: null,
-                price: null,
-                paymentMethod: null
-            };
+            currentCheckoutPlan = null;
+            currentCheckoutPrice = null;
         }
 
         // Validate email
         function validateEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const isValid = re.test(email);
-            console.log('Email validation for', email, ':', isValid ? 'VALID' : 'INVALID');
-            return isValid;
+            return re.test(email);
         }
 
-        // Proceed to payment method selection
-        function proceedToPaymentMethod() {
+        // Proceed with checkout
+        async function proceedWithCheckout() {
             const input = document.getElementById('modalEmailInput');
             const error = document.getElementById('emailError');
             const email = input.value.trim();
@@ -1183,180 +958,64 @@
             error.classList.remove('show');
             input.style.borderColor = '';
 
-            // Store email
-            currentCheckoutData.email = email;
-
-            if (DEBUG_MODE) {
-                console.log('Email validated, proceeding to payment method selection:', currentCheckoutData);
-            }
-
-            // Close email modal
-            document.getElementById('emailModal').classList.remove('show');
-
-            // Show payment method modal
-            showPaymentMethodModal();
+            // Proceed with checkout
+            await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
+            
+            // Close modal
+            closeEmailModal();
         }
 
-        // Show payment method modal
-        function showPaymentMethodModal() {
-            const modal = document.getElementById('paymentMethodModal');
-            const planDisplay = document.getElementById('selectedPlanDisplay');
+        // Checkout function
+        async function checkout(email, plan, price) {
+            // Find the Continue button in the modal
+            const btn = document.querySelector('.modal-btn-primary');
+            const originalText = btn ? btn.innerHTML : 'Continue';
             
-            if (DEBUG_MODE) {
-                console.log('Showing payment modal with data:', currentCheckoutData);
-            }
-            
-            // Display selected plan
-            planDisplay.textContent = `${currentCheckoutData.plan.charAt(0).toUpperCase() + currentCheckoutData.plan.slice(1)} (${currentCheckoutData.price})`;
-            
-            // Reset selection
-            document.querySelectorAll('.payment-method-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            document.getElementById('cryptoInfo').classList.remove('show');
-            
-            // Reset and disable the continue button initially
-            const btn = document.getElementById('paymentContinueBtn');
-            btn.innerHTML = 'Select a Payment Method';
-            btn.disabled = true;
-            currentCheckoutData.paymentMethod = null;
-            
-            // Show modal
-            modal.classList.add('show');
-        }
-
-        // Select payment method
-        function selectPaymentMethod(method) {
-            console.log('Payment method selected:', method);
-            
-            currentCheckoutData.paymentMethod = method;
-            
-            // Update UI
-            document.querySelectorAll('.payment-method-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            const btn = document.getElementById('paymentContinueBtn');
-            
-            if (method === 'stripe') {
-                document.getElementById('stripeMethod').classList.add('selected');
-                document.getElementById('cryptoInfo').classList.remove('show');
-                btn.innerHTML = 'Continue to Secure Checkout';
-            } else if (method === 'crypto') {
-                document.getElementById('cryptoMethod').classList.add('selected');
-                document.getElementById('cryptoInfo').classList.add('show');
-                btn.innerHTML = 'I\'ve Sent Payment';
-            }
-            
-            // Enable continue button
-            btn.disabled = false;
-            
-            console.log('Button state after selection:', { 
-                disabled: btn.disabled, 
-                text: btn.innerHTML,
-                checkoutData: currentCheckoutData 
-            });
-        }
-
-        // Proceed with payment
-        async function proceedWithPayment() {
-            if (!currentCheckoutData.paymentMethod) {
-                alert('Please select a payment method');
-                return;
-            }
-
-            if (!currentCheckoutData.email || !currentCheckoutData.plan || !currentCheckoutData.price) {
-                alert('Missing checkout information. Please try again.');
-                return;
-            }
-
-            const btn = document.getElementById('paymentContinueBtn');
-            const originalText = btn.innerHTML;
-            
-            if (currentCheckoutData.paymentMethod === 'stripe') {
-                // Proceed with Stripe checkout
+            if (btn) {
                 btn.innerHTML = '<span class="loading"></span> Processing...';
                 btn.disabled = true;
+            }
 
-                try {
-                    console.log('Sending checkout request:', {
-                        email: currentCheckoutData.email,
-                        plan: currentCheckoutData.plan,
-                        price: currentCheckoutData.price
-                    });
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email, 
+                        plan, 
+                        price,
+                        product: 'canvaspro'
+                    })
+                });
 
-                    const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
-                            email: currentCheckoutData.email,
-                            plan: currentCheckoutData.plan,
-                            price: currentCheckoutData.price,
-                            product: 'canvaspro'
-                        })
-                    });
+                const data = await response.json();
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                if (data.url) {
+                    // Redirect to Stripe checkout
+                    window.location.href = data.url;
+                } else if (data.testMode) {
+                    // Test mode - show the license directly
+                    alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
+                    closeEmailModal();
+                } else {
+                    alert('Error creating checkout session. Please try again.');
+                    if (btn) {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                     }
-
-                    const data = await response.json();
-                    console.log('Checkout response:', data);
-
-                    if (data.url) {
-                        // Redirect to Stripe checkout
-                        window.location.href = data.url;
-                    } else if (data.testMode) {
-                        // Test mode - show the license directly
-                        alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${currentCheckoutData.email}`);
-                        closePaymentMethodModal();
-                    } else {
-                        throw new Error('No checkout URL received');
-                    }
-                } catch (error) {
-                    console.error('Checkout error:', error);
-                    alert(`Error: ${error.message}\n\nPlease check:\n1. Backend is running at ${BACKEND_URL}\n2. Stripe is configured properly\n3. Your internet connection`);
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Connection error. Please check your internet connection and try again.');
+                
+                // Reset button
+                if (btn) {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
-            } else if (currentCheckoutData.paymentMethod === 'crypto') {
-                // Show crypto payment confirmation
-                const cryptoMessage = `Please send ${currentCheckoutData.price} in your preferred cryptocurrency to one of the addresses shown.\n\nAfter sending:\n1. Take a screenshot of the transaction\n2. Email it to support@learnlabs.shop\n3. Include your email: ${currentCheckoutData.email}\n4. Include your plan: ${currentCheckoutData.plan}\n\nYou'll receive your license key within 24 hours.`;
-                
-                if (confirm(cryptoMessage)) {
-                    closePaymentMethodModal();
-                }
             }
-        }
-
-        // Back to email modal
-        function backToEmail() {
-            console.log('Going back to email modal');
-            document.getElementById('paymentMethodModal').classList.remove('show');
-            document.getElementById('emailModal').classList.add('show');
-            
-            // Focus the email input
-            setTimeout(() => {
-                const emailInput = document.getElementById('modalEmailInput');
-                if (emailInput) {
-                    emailInput.focus();
-                }
-            }, 300);
-        }
-
-        // Close payment method modal
-        function closePaymentMethodModal() {
-            console.log('Closing payment method modal');
-            document.getElementById('paymentMethodModal').classList.remove('show');
-            document.getElementById('emailModal').classList.remove('show');
-            currentCheckoutData = {
-                email: null,
-                plan: null,
-                price: null,
-                paymentMethod: null
-            };
         }
 
         // Order lookup function
@@ -1464,7 +1123,7 @@
                     z-index: 10000;
                     animation: slideIn 0.3s ease;
                 `;
-                toast.textContent = '✓ Copied to clipboard!';
+                toast.textContent = '✓ License key copied!';
                 document.body.appendChild(toast);
                 
                 setTimeout(() => {
@@ -1476,65 +1135,6 @@
             });
         }
 
-        // Check backend connectivity on page load
-        window.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔍 Page loaded - Checking setup...');
-            
-            // Check if all required elements exist
-            const emailModal = document.getElementById('emailModal');
-            const paymentModal = document.getElementById('paymentMethodModal');
-            const emailInput = document.getElementById('modalEmailInput');
-            const paymentBtn = document.getElementById('paymentContinueBtn');
-            
-            console.log('Elements check:');
-            console.log('- Email modal:', emailModal ? '✅' : '❌');
-            console.log('- Payment modal:', paymentModal ? '✅' : '❌');
-            console.log('- Email input:', emailInput ? '✅' : '❌');
-            console.log('- Payment button:', paymentBtn ? '✅' : '❌');
-            
-            console.log('Backend URL:', BACKEND_URL);
-            console.log('Current Origin:', window.location.origin);
-            
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/health`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const data = await response.json();
-                console.log('✅ Backend health check response:', data);
-                
-                if (data.status === 'ok') {
-                    console.log('✅ Backend is running and reachable');
-                    
-                    // Also check config endpoint
-                    try {
-                        const configResponse = await fetch(`${BACKEND_URL}/api/config`);
-                        const configData = await configResponse.json();
-                        console.log('📋 Backend config:', configData);
-                        
-                        if (configData.testMode) {
-                            console.log('⚠️ Backend is in TEST MODE (Stripe not configured)');
-                        } else {
-                            console.log('✅ Backend has Stripe configured');
-                        }
-                    } catch (e) {
-                        console.error('❌ Could not fetch config:', e);
-                    }
-                } else {
-                    console.warn('⚠️ Backend returned unexpected status:', data);
-                }
-            } catch (error) {
-                console.error('❌ Backend connectivity error:', error);
-                console.error('Make sure:');
-                console.error('1. Your backend is running at:', BACKEND_URL);
-                console.error('2. CORS is configured to allow:', window.location.origin);
-                console.error('3. The /api/health endpoint exists');
-            }
-        });
-
         // Enter key support for lookup
         document.getElementById('lookupInput')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -1545,52 +1145,23 @@
         // Enter key support for email modal
         document.getElementById('modalEmailInput')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                e.preventDefault();
-                proceedToPaymentMethod();
-            }
-        });
-        
-        // Add click listener as backup
-        document.addEventListener('DOMContentLoaded', function() {
-            const emailContinueBtn = document.getElementById('emailContinueBtn');
-            if (emailContinueBtn) {
-                emailContinueBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    console.log('Email continue button clicked via event listener');
-                    proceedToPaymentMethod();
-                });
+                proceedWithCheckout();
             }
         });
 
-        // Close modals on escape key
+        // Close modal on escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                const emailModal = document.getElementById('emailModal');
-                const paymentModal = document.getElementById('paymentMethodModal');
-                
-                if (paymentModal.classList.contains('show')) {
-                    closePaymentMethodModal();
-                } else if (emailModal.classList.contains('show')) {
-                    closeEmailModal();
-                }
+                closeEmailModal();
             }
         });
 
-        // Close modals on background click
+        // Close modal on background click
         document.getElementById('emailModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeEmailModal();
             }
         });
-
-        document.getElementById('paymentMethodModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePaymentMethodModal();
-            }
-        });
-        
-        console.log('✅ All event listeners attached');
-        console.log('🎯 Ready to process payments!');
     </script>
 </body>
 </html>
