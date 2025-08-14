@@ -1049,6 +1049,7 @@
         let currentCheckoutPrice = null;
         let currentPaymentMethod = null;
         let currentLookupEmail = null;
+        let currentOrderEmail = null;
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -1102,6 +1103,9 @@
             // Hide error if shown
             error.classList.remove('show');
             input.style.borderColor = '';
+
+            // Store email for later use
+            currentOrderEmail = email;
 
             // Close email modal and show payment options
             closeEmailModal();
@@ -1175,20 +1179,31 @@
         async function proceedToPayment() {
             if (!currentPaymentMethod) return;
 
-            // Close payment modal
-            closePaymentModal();
+            const continueBtn = document.getElementById('paymentProceedBtn');
+            const originalText = continueBtn.innerHTML;
             
-            // Get email from the previous modal
-            const email = document.getElementById('modalEmailInput').value.trim();
+            // Show processing state
+            continueBtn.innerHTML = '<span class="loading"></span> Processing...';
+            continueBtn.disabled = true;
 
-            // Proceed with the selected payment method
-            if (currentPaymentMethod === 'stripe') {
-                await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
-            } else if (currentPaymentMethod === 'crypto') {
-                // For now, crypto payments aren't implemented
-                alert('🚧 Crypto payments are coming soon!\n\nPlease use credit/debit card for now.');
-                showPaymentModal(); // Show payment modal again
+            try {
+                // Proceed with the selected payment method
+                if (currentPaymentMethod === 'stripe') {
+                    await checkout(currentOrderEmail, currentCheckoutPlan, currentCheckoutPrice);
+                    // If we get here without redirect, there was an error
+                    alert('Error creating checkout session. Please try again.');
+                } else if (currentPaymentMethod === 'crypto') {
+                    // For now, crypto payments aren't implemented
+                    alert('🚧 Crypto payments are coming soon!\n\nPlease use credit/debit card for now.');
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                alert('Connection error. Please try again.');
             }
+            
+            // Reset button if still here (payment didn't redirect)
+            continueBtn.innerHTML = originalText;
+            continueBtn.disabled = false;
         }
 
         // Proceed with verification (from verification modal)
@@ -1231,17 +1246,20 @@
                 const data = await response.json();
 
                 if (data.url) {
+                    // Close payment modal before redirect
+                    closePaymentModal();
                     // Redirect to Stripe checkout
                     window.location.href = data.url;
                 } else if (data.testMode) {
                     // Test mode - show the license directly
+                    closePaymentModal();
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
                 } else {
-                    alert('Error creating checkout session. Please try again.');
+                    throw new Error(data.error || 'Unknown error creating checkout session');
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
-                alert('Connection error. Please check your internet connection and try again.');
+                throw error; // Re-throw so proceedToPayment can handle it
             }
         }
 
