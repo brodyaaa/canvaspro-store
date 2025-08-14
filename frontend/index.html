@@ -1,4 +1,28 @@
-// Manual backend URL override (for debugging)
+// Logo error handling - FIXED syntax to prevent code showing on page
+        window.addEventListener('load', function() {
+            // Check all images and add error handling
+            const images = document.querySelectorAll('img[src*="imgur.com"]');
+            images.forEach(img => {
+                img.onerror = function() {
+                    console.warn('Logo failed to load, using fallback');
+                    // Use a data URI as fallback or hide the image gracefully
+                    this.style.display = 'none';
+                    
+                    // Create a text fallback
+                    const fallback = document.createElement('div');
+                    fallback.innerHTML = '🎓';
+                    fallback.className = 'logo-fallback';
+                    this.parentNode.insertBefore(fallback, this);
+                };
+                
+                // Force reload if not loaded
+                if (!img.complete || img.naturalHeight === 0) {
+                    img.src = img.src + '?' + Date.now();
+                }
+            });
+        });
+
+        // Manual backend URL override (for debugging)
         window.setBackendUrl = function(url) {
             BACKEND_URL = url;
             localStorage.setItem('cpAdminBackendUrl', url);
@@ -10,6 +34,11 @@
         window.showBackendUrl = function() {
             console.log('🔧 Current backend URL:', BACKEND_URL);
             console.log('🔧 Fallback URLs:', FALLBACK_URLS);
+        };
+
+        // Quick backend fix command
+        window.fixBackend = function() {
+            setBackendUrl('https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev');
         };<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -713,7 +742,60 @@
             .pricing-container { grid-template-columns: 1fr; }
         }
 
+        /* Logo fallback styling */
+        .logo-fallback {
+            display: inline-block;
+            font-size: 40px;
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+            background: var(--primary);
+            border-radius: 8px;
+        }
+
         /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 9999;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.offline {
+            background: #ef4444;
+            color: white;
+        }
+
+        .connection-status.checking {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .connection-status.online {
+            background: var(--green);
+            color: white;
+        }
         .loading {
             display: inline-block;
             width: 20px;
@@ -1062,7 +1144,7 @@
         // Configuration - FIXED STRIPE KEY AND DYNAMIC BACKEND URL
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
-        // Dynamic backend URL detection - FIXED for Replit
+        // Dynamic backend URL detection - FIXED for production domain
         function getBackendUrl() {
             try {
                 const hostname = window.location.hostname;
@@ -1070,15 +1152,19 @@
                 
                 console.log('🔧 URL Detection:', { hostname, origin });
                 
+                // If we're on the production domain, use the Replit backend
+                if (hostname === 'learnlabs.shop' || hostname === 'www.learnlabs.shop') {
+                    // Use your actual Replit backend URL here
+                    return 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+                }
+                
                 // Check if we're on localhost
                 if (hostname === 'localhost' || hostname === '127.0.0.1') {
                     return 'http://localhost:3000';
                 }
 
-                // Check if we're on Replit
+                // Check if we're on Replit - use same domain  
                 if (hostname.includes('replit.dev')) {
-                    // For Replit, the backend usually runs on the same domain
-                    // Try the origin first, and if that fails, we'll try with port 3000
                     return origin;
                 }
 
@@ -1099,16 +1185,15 @@
         let BACKEND_URL = getBackendUrl();
 
         // Alternative URLs to try if main one fails
-        const FALLBACK_URLS = [];
+        const FALLBACK_URLS = [
+            'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',
+            'http://localhost:3000'
+        ];
         
-        // Add fallback URLs for Replit
+        // Add fallback URLs for Replit if we're on Replit
         if (window.location.hostname.includes('replit.dev')) {
             const baseUrl = window.location.origin;
-            FALLBACK_URLS.push(
-                baseUrl,
-                baseUrl.replace('https://', 'https://').replace('http://', 'http://'),
-                baseUrl + ':3000' // Try with port 3000
-            );
+            FALLBACK_URLS.unshift(baseUrl); // Add to beginning
         }
 
         // Store current checkout info
