@@ -763,8 +763,8 @@
             <div class="error-message" id="emailError">Please enter a valid email address</div>
             
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-primary" onclick="proceedToPaymentMethod()">Continue</button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
+                <button type="button" class="modal-btn modal-btn-primary" id="emailContinueBtn" onclick="proceedToPaymentMethod()">Continue</button>
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1082,6 +1082,22 @@
         console.log('Backend URL:', BACKEND_URL);
         console.log('Frontend URL:', window.location.origin);
 
+        // Override window.onerror for better error catching
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('❌ Global Error Caught:');
+            console.error('Message:', msg);
+            console.error('Source:', url);
+            console.error('Line:', lineNo, 'Column:', columnNo);
+            console.error('Error object:', error);
+            return false;
+        };
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('❌ JavaScript Error:', e.error);
+            console.error('At:', e.filename, 'Line:', e.lineno, 'Col:', e.colno);
+        });
+
         // Store current checkout info
         let currentCheckoutData = {
             email: null,
@@ -1089,6 +1105,20 @@
             price: null,
             paymentMethod: null
         };
+        
+        // TEST FUNCTION - Type this in console to test: testPaymentFlow()
+        window.testPaymentFlow = function() {
+            console.log('🧪 TEST: Manually triggering payment flow');
+            currentCheckoutData = {
+                email: 'test@example.com',
+                plan: 'monthly',
+                price: 30,
+                paymentMethod: null
+            };
+            showPaymentMethodModal();
+        };
+        
+        console.log('💡 TIP: Type testPaymentFlow() in console to test the payment modal');
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -1131,7 +1161,9 @@
         // Validate email
         function validateEmail(email) {
             const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(email);
+            const isValid = re.test(email);
+            console.log('Email validation for', email, ':', isValid ? 'VALID' : 'INVALID');
+            return isValid;
         }
 
         // Proceed to payment method selection
@@ -1301,12 +1333,22 @@
 
         // Back to email modal
         function backToEmail() {
+            console.log('Going back to email modal');
             document.getElementById('paymentMethodModal').classList.remove('show');
             document.getElementById('emailModal').classList.add('show');
+            
+            // Focus the email input
+            setTimeout(() => {
+                const emailInput = document.getElementById('modalEmailInput');
+                if (emailInput) {
+                    emailInput.focus();
+                }
+            }, 300);
         }
 
         // Close payment method modal
         function closePaymentMethodModal() {
+            console.log('Closing payment method modal');
             document.getElementById('paymentMethodModal').classList.remove('show');
             document.getElementById('emailModal').classList.remove('show');
             currentCheckoutData = {
@@ -1436,7 +1478,20 @@
 
         // Check backend connectivity on page load
         window.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔍 Checking backend connectivity...');
+            console.log('🔍 Page loaded - Checking setup...');
+            
+            // Check if all required elements exist
+            const emailModal = document.getElementById('emailModal');
+            const paymentModal = document.getElementById('paymentMethodModal');
+            const emailInput = document.getElementById('modalEmailInput');
+            const paymentBtn = document.getElementById('paymentContinueBtn');
+            
+            console.log('Elements check:');
+            console.log('- Email modal:', emailModal ? '✅' : '❌');
+            console.log('- Payment modal:', paymentModal ? '✅' : '❌');
+            console.log('- Email input:', emailInput ? '✅' : '❌');
+            console.log('- Payment button:', paymentBtn ? '✅' : '❌');
+            
             console.log('Backend URL:', BACKEND_URL);
             console.log('Current Origin:', window.location.origin);
             
@@ -1490,7 +1545,20 @@
         // Enter key support for email modal
         document.getElementById('modalEmailInput')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                e.preventDefault();
                 proceedToPaymentMethod();
+            }
+        });
+        
+        // Add click listener as backup
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailContinueBtn = document.getElementById('emailContinueBtn');
+            if (emailContinueBtn) {
+                emailContinueBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Email continue button clicked via event listener');
+                    proceedToPaymentMethod();
+                });
             }
         });
 
@@ -1520,6 +1588,9 @@
                 closePaymentMethodModal();
             }
         });
+        
+        console.log('✅ All event listeners attached');
+        console.log('🎯 Ready to process payments!');
     </script>
 </body>
 </html>
