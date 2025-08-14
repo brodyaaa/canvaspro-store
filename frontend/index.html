@@ -864,10 +864,11 @@
     <section class="lookup-section" id="lookup">
         <div class="lookup-container">
             <h2>Check Your Order</h2>
-            <p style="color: #aaa; margin-bottom: 30px;">Enter your email or license key to view your order details</p>
+            <p style="color: #aaa; margin-bottom: 10px;">Enter your email or license key to view your order details</p>
+            <p style="color: #ffa366; font-size: 0.9rem; margin-bottom: 30px;">🔒 For email lookups, you'll need the last 4 characters of your license key for security verification</p>
             
             <div class="lookup-form">
-                <input type="text" class="lookup-input" id="lookupInput" placeholder="Email or License Key (XXXX-XXXX-XXXX-XXXX)">
+                <input type="text" class="lookup-input" id="lookupInput" placeholder="Email or Full License Key (XXXX-XXXX-XXXX-XXXX)">
                 <button class="btn btn-primary" onclick="lookupOrder()">Check</button>
             </div>
             
@@ -966,16 +967,21 @@
 
         // Checkout function
         async function checkout(email, plan, price) {
-            try {
-                // Show loading state
-                const btn = event.target;
-                const originalText = btn.innerHTML;
+            // Find the Continue button in the modal
+            const btn = document.querySelector('.modal-btn-primary');
+            const originalText = btn ? btn.innerHTML : 'Continue';
+            
+            if (btn) {
                 btn.innerHTML = '<span class="loading"></span> Processing...';
                 btn.disabled = true;
+            }
 
+            try {
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ 
                         email, 
                         plan, 
@@ -992,19 +998,22 @@
                 } else if (data.testMode) {
                     // Test mode - show the license directly
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
+                    closeEmailModal();
                 } else {
                     alert('Error creating checkout session. Please try again.');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
                 alert('Connection error. Please check your internet connection and try again.');
                 
                 // Reset button
-                if (event.target) {
-                    event.target.innerHTML = originalText;
-                    event.target.disabled = false;
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             }
         }
@@ -1019,6 +1028,22 @@
                 return;
             }
 
+            // Check if it's an email and needs verification
+            let verification = null;
+            if (lookup.includes('@')) {
+                verification = prompt('For security, please enter the last 4 characters of your license key or order number:');
+                if (!verification || verification.length < 4) {
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444;">
+                            <h3>❌ Verification Required</h3>
+                            <p style="margin-top: 15px; color: #aaa;">For email lookups, you must provide the last 4 characters of your license key for security.</p>
+                        </div>
+                    `;
+                    resultDiv.classList.add('show');
+                    return;
+                }
+            }
+
             resultDiv.innerHTML = '<div class="loading"></div> Searching...';
             resultDiv.classList.add('show');
 
@@ -1026,7 +1051,10 @@
                 const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lookup })
+                    body: JSON.stringify({ 
+                        lookup,
+                        verification: verification 
+                    })
                 });
 
                 if (!response.ok) {
@@ -1063,7 +1091,8 @@
                     resultDiv.innerHTML = `
                         <div style="color: #ef4444;">
                             <h3>❌ Order Not Found</h3>
-                            <p style="margin-top: 15px; color: #aaa;">No order found with that email or license key. Please check your input and try again.</p>
+                            <p style="margin-top: 15px; color: #aaa;">${data.error || 'No order found. Please check your information and try again.'}</p>
+                            ${data.requiresVerification ? '<p style="margin-top: 10px; color: #ffa366;">Tip: For email lookups, you need the last 4 characters of your license key.</p>' : ''}
                         </div>
                     `;
                 }
