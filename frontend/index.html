@@ -798,6 +798,46 @@
             margin-top: 10px;
         }
 
+        /* Backend Status Indicator */
+        .backend-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--dark);
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 999;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online {
+            background: var(--green);
+        }
+
+        .status-indicator.offline {
+            background: var(--red);
+        }
+
+        .status-indicator.checking {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         /* Footer */
         footer {
             padding: 40px;
@@ -829,6 +869,7 @@
             .pricing-card.popular { transform: none; }
             .lookup-form { flex-direction: column; }
             .pricing-container { grid-template-columns: 1fr; }
+            .backend-status { font-size: 0.8rem; }
         }
 
         /* Loading Animation */
@@ -849,6 +890,12 @@
 </head>
 <body>
     <div class="bg-animation"></div>
+
+    <!-- Backend Status Indicator -->
+    <div class="backend-status" id="backendStatus">
+        <div class="status-indicator checking" id="statusIndicator"></div>
+        <span id="statusText">Checking backend...</span>
+    </div>
 
     <!-- Email Modal -->
     <div class="modal-overlay" id="emailModal">
@@ -1261,52 +1308,21 @@
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
-        // Configuration
+        // Configuration - FIXED FOR YOUR ENVIRONMENT
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
-        // Encrypted storage for sensitive data
-        const CONFIG = {
-            get STRIPE_SECRET() {
-                // This should be stored on backend only, never exposed to frontend
-                return btoa('sk_live_' + '51RuHrAJZLe1MfeZPHgRStGHv2GlzDP2010FFUDWFPwRV7Sv6DAUHegdPKxYQWPOcnsJ5gsUxOQP94pdQCtnVbMsl00kBi9fayR');
-            }
-        };
+        // Backend URL configuration - UPDATED WITH MULTIPLE FALLBACKS
+        let BACKEND_URL = '';
+        let backendHealthy = false;
+        let backendCheckInterval = null;
 
-        // Crypto wallets configuration
-        const CRYPTO_WALLETS = {
-            btc: 'bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8',
-            eth: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            sol: 'C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm',
-            polygon: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            base: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA',
-            sui: '0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480',
-            monad: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA'
-        };
-
-        // Backend URL configuration - UPDATED WITH FALLBACK
-        function getBackendUrl() {
-            const hostname = window.location.hostname;
-            
-            // Primary backend URL for production
-            const REPLIT_BACKEND = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
-            
-            if (hostname === 'learnlabs.shop' || hostname === 'www.learnlabs.shop') {
-                return REPLIT_BACKEND;
-            }
-            
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
-            }
-            
-            if (hostname.includes('replit.dev')) {
-                return window.location.origin;
-            }
-            
-            // Default to Replit backend for any other domain
-            return REPLIT_BACKEND;
-        }
-
-        const BACKEND_URL = getBackendUrl();
+        // List of possible backend URLs to try
+        const BACKEND_URLS = [
+            'http://localhost:3000',  // Local development
+            'http://127.0.0.1:3000',  // Alternative localhost
+            'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',  // Your Replit URL
+            window.location.origin     // Current domain as fallback
+        ];
 
         // Initialize Stripe
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
@@ -1318,6 +1334,161 @@
         let currentLookupEmail = null;
         let currentOrderEmail = null;
         let paymentTimeoutId = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            findWorkingBackend();
+            setupEventListeners();
+        });
+
+        // Find a working backend URL
+        async function findWorkingBackend() {
+            updateBackendStatus('checking', 'Finding backend...');
+            
+            for (const url of BACKEND_URLS) {
+                console.log(`Testing backend at: ${url}`);
+                try {
+                    const response = await fetch(`${url}/api/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        signal: AbortSignal.timeout(3000)  // 3 second timeout
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.status === 'ok') {
+                            BACKEND_URL = url;
+                            backendHealthy = true;
+                            console.log(`✅ Backend found at: ${url}`);
+                            updateBackendStatus('online', `Connected to backend`);
+                            
+                            // Start health monitoring
+                            startHealthMonitoring();
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.log(`Failed to connect to ${url}:`, error.message);
+                }
+            }
+            
+            // No backend found
+            backendHealthy = false;
+            updateBackendStatus('offline', 'Backend offline - Using test mode');
+            console.error('❌ No working backend found. Payments will run in test mode.');
+            
+            // Retry in 30 seconds
+            setTimeout(findWorkingBackend, 30000);
+        }
+
+        // Monitor backend health
+        function startHealthMonitoring() {
+            if (backendCheckInterval) {
+                clearInterval(backendCheckInterval);
+            }
+            
+            backendCheckInterval = setInterval(async () => {
+                if (!BACKEND_URL) return;
+                
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    
+                    if (response.ok) {
+                        if (!backendHealthy) {
+                            backendHealthy = true;
+                            updateBackendStatus('online', 'Backend online');
+                        }
+                    } else {
+                        throw new Error('Backend unhealthy');
+                    }
+                } catch (error) {
+                    if (backendHealthy) {
+                        backendHealthy = false;
+                        updateBackendStatus('offline', 'Backend offline');
+                        // Try to find a new working backend
+                        findWorkingBackend();
+                    }
+                }
+            }, 15000); // Check every 15 seconds
+        }
+
+        // Update backend status indicator
+        function updateBackendStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            if (indicator) {
+                indicator.className = `status-indicator ${status}`;
+            }
+            if (statusText) {
+                statusText.textContent = text;
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Enter key support for lookup
+            document.getElementById('lookupInput')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    lookupOrder();
+                }
+            });
+
+            // Enter key support for email modal
+            document.getElementById('modalEmailInput')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    proceedWithCheckout();
+                }
+            });
+
+            // Enter key support for verification modal
+            document.getElementById('verificationInput')?.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    proceedWithVerification();
+                }
+            });
+
+            // Close modal on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeEmailModal();
+                    closeVerificationModal();
+                    closePaymentModal();
+                    closeCryptoModal();
+                }
+            });
+
+            // Close modals on background click
+            document.getElementById('emailModal')?.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEmailModal();
+                }
+            });
+
+            document.getElementById('verificationModal')?.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeVerificationModal();
+                }
+            });
+
+            document.getElementById('paymentModal')?.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closePaymentModal();
+                }
+            });
+
+            document.getElementById('cryptoModal')?.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeCryptoModal();
+                }
+            });
+        }
 
         // Show email modal
         function showEmailModal(plan, price) {
@@ -1560,7 +1731,7 @@
             return key;
         }
 
-        // Proceed to payment (from payment modal) - ENHANCED DEBUG VERSION
+        // Proceed to payment (from payment modal) - IMPROVED VERSION
         async function proceedToPayment() {
             if (!currentPaymentMethod) return;
 
@@ -1574,14 +1745,26 @@
             console.log('Starting payment process...');
             console.log('Payment method:', currentPaymentMethod);
             console.log('Backend URL:', BACKEND_URL);
+            console.log('Backend healthy:', backendHealthy);
 
-            // Set a timeout to reset the button if it gets stuck
-            paymentTimeoutId = setTimeout(() => {
+            // Check if backend is available
+            if (!backendHealthy || !BACKEND_URL) {
+                // Use test mode
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
-                alert('Payment timeout. The backend might be sleeping. Click OK to try waking it up.');
-                window.open(BACKEND_URL + '/api/health', '_blank');
-            }, 15000); // 15 second timeout
+                
+                if (currentPaymentMethod === 'stripe') {
+                    alert('⚠️ Backend is offline. Payment processing is temporarily unavailable.\n\nPlease try again in a few moments or contact support.');
+                    
+                    // Try to wake up backend
+                    findWorkingBackend();
+                } else if (currentPaymentMethod === 'crypto') {
+                    // Crypto can work without backend
+                    closePaymentModal();
+                    showCryptoModal();
+                }
+                return;
+            }
 
             try {
                 // Proceed with the selected payment method
@@ -1589,10 +1772,6 @@
                     console.log('Initiating Stripe checkout...');
                     await checkout(currentOrderEmail, currentCheckoutPlan, currentCheckoutPrice);
                 } else if (currentPaymentMethod === 'crypto') {
-                    // Clear timeout since we're successfully proceeding
-                    clearTimeout(paymentTimeoutId);
-                    paymentTimeoutId = null;
-                    
                     // Close payment modal and show crypto modal
                     closePaymentModal();
                     showCryptoModal();
@@ -1602,65 +1781,26 @@
                     continueBtn.disabled = false;
                 }
             } catch (error) {
-                console.error('Payment error details:', error);
-                
-                // Clear timeout
-                if (paymentTimeoutId) {
-                    clearTimeout(paymentTimeoutId);
-                    paymentTimeoutId = null;
-                }
+                console.error('Payment error:', error);
                 
                 // Reset button
                 continueBtn.innerHTML = originalText;
                 continueBtn.disabled = false;
                 
-                // More detailed error message
-                let errorMsg = 'Payment Error:\n\n';
-                if (error.message.includes('Backend server is not reachable')) {
-                    errorMsg += 'The backend server is not responding. This usually means:\n';
-                    errorMsg += '1. The Replit server is sleeping (most likely)\n';
-                    errorMsg += '2. CORS is blocking the request\n\n';
-                    errorMsg += 'Click OK to open the backend in a new tab to wake it up.';
-                    alert(errorMsg);
-                    window.open(BACKEND_URL + '/api/health', '_blank');
-                } else {
-                    errorMsg += error.message;
-                    alert(errorMsg);
-                }
+                // Show error
+                alert(`Payment Error:\n\n${error.message}\n\nPlease try again or contact support.`);
             }
         }
 
-        // Checkout function - FULL DEBUG VERSION
+        // Checkout function - IMPROVED WITH BETTER ERROR HANDLING
         async function checkout(email, plan, price) {
-            console.log('Checkout function called with:', { email, plan, price });
-            console.log('Backend URL:', BACKEND_URL);
+            console.log('Checkout called:', { email, plan, price, backend: BACKEND_URL });
+            
+            if (!backendHealthy || !BACKEND_URL) {
+                throw new Error('Backend is not available. Please try again in a moment.');
+            }
             
             try {
-                // First, wake up the backend if needed
-                console.log('Testing backend health...');
-                const healthResponse = await fetch(`${BACKEND_URL}/api/health`, {
-                    method: 'GET',
-                    mode: 'cors',
-                    credentials: 'omit'
-                }).catch(err => {
-                    console.error('Health check failed:', err);
-                    return null;
-                });
-
-                if (!healthResponse) {
-                    console.error('Backend is not responding at all');
-                    throw new Error('Backend server is not reachable. The Replit server is likely sleeping.');
-                }
-
-                const healthData = await healthResponse.json();
-                console.log('Backend health response:', healthData);
-
-                if (!healthData.configured) {
-                    throw new Error('Backend is running but Stripe is not configured. Check Replit secrets.');
-                }
-
-                // Now create the checkout session
-                console.log('Creating checkout session...');
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
                     headers: { 
@@ -1674,47 +1814,46 @@
                         plan, 
                         price,
                         product: 'canvaspro'
-                    })
+                    }),
+                    signal: AbortSignal.timeout(10000)  // 10 second timeout
                 });
 
-                console.log('Checkout response status:', response.status);
+                console.log('Response status:', response.status);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Checkout error response:', errorText);
-                    throw new Error(`Server error (${response.status}): ${errorText}`);
+                    console.error('Checkout error:', errorText);
+                    throw new Error(`Server error: ${errorText}`);
                 }
 
                 const data = await response.json();
-                console.log('Checkout response data:', data);
-
-                // Clear timeout since we got a response
-                if (paymentTimeoutId) {
-                    clearTimeout(paymentTimeoutId);
-                    paymentTimeoutId = null;
-                }
+                console.log('Checkout response:', data);
 
                 if (data.url) {
-                    console.log('Got Stripe URL, redirecting to:', data.url);
+                    console.log('Redirecting to Stripe:', data.url);
                     // Close payment modal before redirect
                     closePaymentModal();
-                    // Small delay to ensure modal closes
-                    setTimeout(() => {
-                        window.location.href = data.url;
-                    }, 100);
+                    // Redirect to Stripe
+                    window.location.href = data.url;
                 } else if (data.testMode) {
                     // Test mode - show the license directly
-                    console.log('Running in test mode');
+                    console.log('Test mode order created');
                     closePaymentModal();
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
                 } else {
-                    console.error('No URL in response:', data);
-                    throw new Error(data.error || 'No checkout URL received from server');
+                    throw new Error(data.error || 'No checkout URL received');
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
-                console.error('Error stack:', error.stack);
-                throw error; // Re-throw so proceedToPayment can handle it
+                
+                // If it's a timeout or network error, mark backend as unhealthy
+                if (error.name === 'AbortError' || error.message.includes('fetch')) {
+                    backendHealthy = false;
+                    updateBackendStatus('offline', 'Backend unreachable');
+                    findWorkingBackend();  // Try to find a new backend
+                }
+                
+                throw error;
             }
         }
 
@@ -1759,37 +1898,46 @@
             performLookup(lookup, null);
         }
 
-        // Perform the actual lookup - IMPROVED ERROR HANDLING
+        // Perform the actual lookup - WITH FALLBACK FOR OFFLINE MODE
         async function performLookup(lookup, verification) {
             const resultDiv = document.getElementById('lookupResult');
 
             resultDiv.innerHTML = '<div class="loading"></div> Searching...';
             resultDiv.classList.add('show');
 
-            try {
-                // Test if backend is reachable first
-                const testResponse = await fetch(`${BACKEND_URL}/api/health`, {
-                    method: 'GET',
-                    mode: 'cors'
-                }).catch(() => null);
+            if (!backendHealthy || !BACKEND_URL) {
+                // Check localStorage for test orders
+                const testOrders = Object.keys(localStorage)
+                    .filter(key => key.startsWith('order_'))
+                    .map(key => JSON.parse(localStorage.getItem(key)));
+                
+                const foundOrder = testOrders.find(order => 
+                    order.licenseKey === lookup || 
+                    (order.email === lookup && order.licenseKey.endsWith(verification?.toUpperCase()))
+                );
 
-                if (!testResponse || !testResponse.ok) {
+                if (foundOrder) {
                     resultDiv.innerHTML = `
-                        <div style="color: #ef4444;">
-                            <h3>❌ Backend Server Offline</h3>
-                            <p style="margin-top: 15px; color: #aaa;">The backend server is not responding. This could mean:</p>
-                            <ul style="text-align: left; color: #aaa; margin-top: 10px;">
-                                <li>The Replit server is sleeping (visit the Replit URL to wake it)</li>
-                                <li>The server crashed and needs to be restarted</li>
-                                <li>Network connectivity issues</li>
-                            </ul>
-                            <p style="margin-top: 15px; color: #ffa366;">Backend URL: <code style="background: #333; padding: 5px; border-radius: 5px;">${BACKEND_URL}</code></p>
-                            <a href="${BACKEND_URL}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Click here to wake up the server</a>
+                        <h3 style="color: #10b981; margin-bottom: 20px;">✅ Order Found (Test Mode)</h3>
+                        <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px;">
+                            <p><strong>Order #:</strong> ${foundOrder.orderNumber}</p>
+                            <p><strong>Plan:</strong> ${foundOrder.plan}</p>
+                            <p><strong>Status:</strong> ${foundOrder.status}</p>
+                            <p><strong>License Key:</strong> ${foundOrder.licenseKey}</p>
                         </div>
                     `;
-                    return;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444;">
+                            <h3>❌ Backend Offline</h3>
+                            <p style="margin-top: 15px; color: #aaa;">Cannot lookup orders while backend is offline. Please try again later.</p>
+                        </div>
+                    `;
                 }
+                return;
+            }
 
+            try {
                 const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1798,7 +1946,8 @@
                     body: JSON.stringify({ 
                         lookup,
                         verification: verification 
-                    })
+                    }),
+                    signal: AbortSignal.timeout(10000)
                 });
 
                 if (!response.ok) {
@@ -1842,13 +1991,18 @@
                 }
             } catch (error) {
                 console.error('Lookup error:', error);
+                
+                // Mark backend as unhealthy if network error
+                if (error.name === 'AbortError' || error.message.includes('fetch')) {
+                    backendHealthy = false;
+                    updateBackendStatus('offline', 'Backend unreachable');
+                    findWorkingBackend();
+                }
+                
                 resultDiv.innerHTML = `
                     <div style="color: #ef4444;">
                         <h3>❌ Connection Error</h3>
-                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please check if the backend is running at:</p>
-                        <code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code>
-                        <p style="margin-top: 15px; color: #ffa366;">Error: ${error.message}</p>
-                        <a href="${BACKEND_URL}" target="_blank" style="color: #3b82f6; text-decoration: underline; display: block; margin-top: 10px;">Click here to wake up the server</a>
+                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please try again later.</p>
                     </div>
                 `;
             }
@@ -1882,117 +2036,15 @@
             });
         }
 
-        // Enter key support for lookup
-        document.getElementById('lookupInput')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                lookupOrder();
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (backendCheckInterval) {
+                clearInterval(backendCheckInterval);
             }
         });
 
-        // Enter key support for email modal
-        document.getElementById('modalEmailInput')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                proceedWithCheckout();
-            }
-        });
-
-        // Enter key support for verification modal
-        document.getElementById('verificationInput')?.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                proceedWithVerification();
-            }
-        });
-
-        // Close modal on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeEmailModal();
-                closeVerificationModal();
-                closePaymentModal();
-                closeCryptoModal();
-            }
-        });
-
-        // Close modals on background click
-        document.getElementById('emailModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeEmailModal();
-            }
-        });
-
-        document.getElementById('verificationModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeVerificationModal();
-            }
-        });
-
-        document.getElementById('paymentModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePaymentModal();
-            }
-        });
-
-        document.getElementById('cryptoModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeCryptoModal();
-            }
-        });
-
-        // DEBUG FUNCTION - Run this in browser console to test Stripe
-        window.debugStripe = async function() {
-            console.log('=== STRIPE DEBUG TEST ===');
-            console.log('Backend URL:', BACKEND_URL);
-            
-            try {
-                // 1. Test backend health
-                console.log('\n1. Testing backend health...');
-                const healthRes = await fetch(`${BACKEND_URL}/api/health`);
-                const health = await healthRes.json();
-                console.log('Health response:', health);
-                
-                if (!health.configured) {
-                    console.error('❌ Backend not configured! Check Replit secrets.');
-                    return;
-                }
-                
-                // 2. Test checkout creation
-                console.log('\n2. Testing checkout creation...');
-                const checkoutRes = await fetch(`${BACKEND_URL}/api/create-checkout`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: 'test@debug.com',
-                        plan: 'test',
-                        price: 1,
-                        product: 'canvaspro'
-                    })
-                });
-                
-                console.log('Checkout status:', checkoutRes.status);
-                const checkoutData = await checkoutRes.json();
-                console.log('Checkout response:', checkoutData);
-                
-                if (checkoutData.url) {
-                    console.log('✅ STRIPE IS WORKING!');
-                    console.log('Checkout URL:', checkoutData.url);
-                    console.log('You can open this URL to test:', checkoutData.url);
-                } else if (checkoutData.testMode) {
-                    console.log('⚠️ Running in TEST MODE - Stripe not configured');
-                    console.log('Test license:', checkoutData.license);
-                } else {
-                    console.error('❌ Error:', checkoutData);
-                }
-                
-            } catch (error) {
-                console.error('❌ Debug test failed:', error);
-                console.error('This usually means the backend is sleeping or unreachable.');
-                console.log('Try opening this URL to wake it up:', BACKEND_URL);
-            }
-            
-            console.log('\n=== END DEBUG TEST ===');
-        };
-        
-        console.log('LearnLabs loaded. Run debugStripe() in console to test Stripe connection.');
+        // Console helper for debugging
+        console.log('LearnLabs loaded. Backend status:', backendHealthy ? 'Online' : 'Searching...');
     </script>
 </body>
 </html>
