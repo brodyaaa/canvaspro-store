@@ -1873,7 +1873,17 @@
         // Checkout function - IMPROVED WITH BETTER ERROR HANDLING
         async function checkout(email, plan, price) {
             console.log('Checkout called:', { email, plan, price, backend: BACKEND_URL });
-            
+        
+// Right after the checkout function starts, add:
+async function checkout(email, plan, price) {
+    console.log('=== CHECKOUT DEBUG ===');
+    console.log('1. Starting checkout with:', { email, plan, price });
+    console.log('2. Backend URL:', BACKEND_URL);
+    console.log('3. Backend healthy:', backendHealthy);
+    console.log('4. Stripe loaded:', !!stripe);
+    
+    // ... rest of the function
+    
             // Check if Stripe is loaded
             if (!stripe) {
                 console.error('Stripe not initialized');
