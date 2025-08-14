@@ -798,7 +798,7 @@
             margin-top: 10px;
         }
 
-        /* Backend Status Indicator */
+        // Backend Status Indicator with wake-up button
         .backend-status {
             position: fixed;
             bottom: 20px;
@@ -831,6 +831,26 @@
 
         .status-indicator.checking {
             background: #f59e0b;
+        }
+
+        .wake-button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .wake-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .backend-status.offline .wake-button {
+            display: inline-block;
         }
 
         @keyframes pulse {
@@ -895,6 +915,7 @@
     <div class="backend-status" id="backendStatus">
         <div class="status-indicator checking" id="statusIndicator"></div>
         <span id="statusText">Checking backend...</span>
+        <button class="wake-button" onclick="wakeBackend()">Wake Server</button>
     </div>
 
     <!-- Email Modal -->
@@ -1304,10 +1325,33 @@
         <p style="color: #666;">© 2025 LearnLabs. All rights reserved.</p>
     </footer>
 
-    <!-- Stripe JS -->
+    <!-- Stripe JS - Load with fallback -->
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
+        // Wait for Stripe to load
+        let stripeLoadAttempts = 0;
+        const maxStripeLoadAttempts = 10;
+        
+        function waitForStripe() {
+            return new Promise((resolve, reject) => {
+                const checkStripe = setInterval(() => {
+                    stripeLoadAttempts++;
+                    if (typeof Stripe !== 'undefined') {
+                        clearInterval(checkStripe);
+                        console.log('✅ Stripe loaded successfully');
+                        resolve();
+                    } else if (stripeLoadAttempts >= maxStripeLoadAttempts) {
+                        clearInterval(checkStripe);
+                        console.error('❌ Failed to load Stripe after 10 attempts');
+                        reject(new Error('Stripe failed to load'));
+                    } else {
+                        console.log(`Waiting for Stripe... (attempt ${stripeLoadAttempts})`);
+                    }
+                }, 500);
+            });
+        }
+        
         // Configuration - FIXED FOR YOUR ENVIRONMENT
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
@@ -1318,14 +1362,18 @@
 
         // List of possible backend URLs to try
         const BACKEND_URLS = [
-            'http://localhost:3000',  // Local development
-            'http://127.0.0.1:3000',  // Alternative localhost
-            'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',  // Your Replit URL
+            'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev',  // Your Replit URL (Primary)
             window.location.origin     // Current domain as fallback
         ];
+        
+        // Add localhost only if in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            BACKEND_URLS.unshift('http://localhost:3000');
+            BACKEND_URLS.unshift('http://127.0.0.1:3000');
+        }
 
-        // Initialize Stripe
-        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+        // Initialize Stripe (will be set after loading)
+        let stripe = null;
 
         // Store current checkout info
         let currentCheckoutPlan = null;
@@ -1336,7 +1384,18 @@
         let paymentTimeoutId = null;
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // First, wait for Stripe to load
+            try {
+                await waitForStripe();
+                stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+                console.log('✅ Stripe initialized');
+            } catch (error) {
+                console.error('❌ Failed to initialize Stripe:', error);
+                updateBackendStatus('offline', 'Stripe failed to load');
+            }
+            
+            // Then find backend
             findWorkingBackend();
             setupEventListeners();
         });
@@ -1352,7 +1411,7 @@
                         method: 'GET',
                         mode: 'cors',
                         credentials: 'omit',
-                        signal: AbortSignal.timeout(3000)  // 3 second timeout
+                        signal: AbortSignal.timeout(10000)  // Increased to 10 seconds for sleeping servers
                     });
                     
                     if (response.ok) {
@@ -1375,8 +1434,8 @@
             
             // No backend found
             backendHealthy = false;
-            updateBackendStatus('offline', 'Backend offline - Using test mode');
-            console.error('❌ No working backend found. Payments will run in test mode.');
+            updateBackendStatus('offline', 'Backend offline - Click Wake Server');
+            console.error('❌ No working backend found. Server may be sleeping.');
             
             // Retry in 30 seconds
             setTimeout(findWorkingBackend, 30000);
@@ -1422,6 +1481,7 @@
         function updateBackendStatus(status, text) {
             const indicator = document.getElementById('statusIndicator');
             const statusText = document.getElementById('statusText');
+            const statusDiv = document.getElementById('backendStatus');
             
             if (indicator) {
                 indicator.className = `status-indicator ${status}`;
@@ -1429,6 +1489,24 @@
             if (statusText) {
                 statusText.textContent = text;
             }
+            if (statusDiv) {
+                statusDiv.className = `backend-status ${status}`;
+            }
+        }
+
+        // Wake backend manually
+        function wakeBackend() {
+            console.log('Manually waking backend...');
+            updateBackendStatus('checking', 'Waking server...');
+            
+            // Open backend in new tab to wake it
+            const replitUrl = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+            window.open(replitUrl, '_blank');
+            
+            // Try to reconnect after a delay
+            setTimeout(() => {
+                findWorkingBackend();
+            }, 3000);
         }
 
         // Setup event listeners
@@ -1796,6 +1874,12 @@
         async function checkout(email, plan, price) {
             console.log('Checkout called:', { email, plan, price, backend: BACKEND_URL });
             
+            // Check if Stripe is loaded
+            if (!stripe) {
+                console.error('Stripe not initialized');
+                throw new Error('Payment system is not ready. Please refresh the page and try again.');
+            }
+            
             if (!backendHealthy || !BACKEND_URL) {
                 throw new Error('Backend is not available. Please try again in a moment.');
             }
@@ -1815,7 +1899,7 @@
                         price,
                         product: 'canvaspro'
                     }),
-                    signal: AbortSignal.timeout(10000)  // 10 second timeout
+                    signal: AbortSignal.timeout(30000)  // Increased to 30 seconds
                 });
 
                 console.log('Response status:', response.status);
@@ -1823,7 +1907,14 @@
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Checkout error:', errorText);
-                    throw new Error(`Server error: ${errorText}`);
+                    
+                    // Try to parse error details
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        throw new Error(errorData.error || `Server error: ${response.status}`);
+                    } catch {
+                        throw new Error(`Server error: ${errorText}`);
+                    }
                 }
 
                 const data = await response.json();
@@ -1847,10 +1938,11 @@
                 console.error('Checkout error:', error);
                 
                 // If it's a timeout or network error, mark backend as unhealthy
-                if (error.name === 'AbortError' || error.message.includes('fetch')) {
+                if (error.name === 'AbortError') {
                     backendHealthy = false;
-                    updateBackendStatus('offline', 'Backend unreachable');
+                    updateBackendStatus('offline', 'Backend timeout - trying to reconnect');
                     findWorkingBackend();  // Try to find a new backend
+                    throw new Error('Payment request timed out. The server may be sleeping. Please try again.');
                 }
                 
                 throw error;
@@ -1906,51 +1998,37 @@
             resultDiv.classList.add('show');
 
             if (!backendHealthy || !BACKEND_URL) {
-                // Check localStorage for test orders
-                const testOrders = Object.keys(localStorage)
-                    .filter(key => key.startsWith('order_'))
-                    .map(key => JSON.parse(localStorage.getItem(key)));
-                
-                const foundOrder = testOrders.find(order => 
-                    order.licenseKey === lookup || 
-                    (order.email === lookup && order.licenseKey.endsWith(verification?.toUpperCase()))
-                );
-
-                if (foundOrder) {
-                    resultDiv.innerHTML = `
-                        <h3 style="color: #10b981; margin-bottom: 20px;">✅ Order Found (Test Mode)</h3>
-                        <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px;">
-                            <p><strong>Order #:</strong> ${foundOrder.orderNumber}</p>
-                            <p><strong>Plan:</strong> ${foundOrder.plan}</p>
-                            <p><strong>Status:</strong> ${foundOrder.status}</p>
-                            <p><strong>License Key:</strong> ${foundOrder.licenseKey}</p>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div style="color: #ef4444;">
-                            <h3>❌ Backend Offline</h3>
-                            <p style="margin-top: 15px; color: #aaa;">Cannot lookup orders while backend is offline. Please try again later.</p>
-                        </div>
-                    `;
-                }
+                // Backend offline message with wake button
+                resultDiv.innerHTML = `
+                    <div style="color: #ef4444;">
+                        <h3>❌ Backend Offline</h3>
+                        <p style="margin-top: 15px; color: #aaa;">The server appears to be sleeping. This is common with free hosting.</p>
+                        <button onclick="wakeBackend()" style="margin-top: 15px; padding: 10px 20px; background: #ff6633; color: white; border: none; border-radius: 5px; cursor: pointer;">Wake Server</button>
+                        <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">After clicking, wait 10-15 seconds and try again.</p>
+                    </div>
+                `;
                 return;
             }
 
             try {
                 const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     mode: 'cors',
-                    credentials: 'include',
+                    credentials: 'omit',
                     body: JSON.stringify({ 
                         lookup,
                         verification: verification 
                     }),
-                    signal: AbortSignal.timeout(10000)
+                    signal: AbortSignal.timeout(15000)
                 });
 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Lookup error response:', errorText);
                     throw new Error(`Server error: ${response.status}`);
                 }
 
@@ -2002,7 +2080,9 @@
                 resultDiv.innerHTML = `
                     <div style="color: #ef4444;">
                         <h3>❌ Connection Error</h3>
-                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please try again later.</p>
+                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. The server may be sleeping.</p>
+                        <button onclick="wakeBackend()" style="margin-top: 15px; padding: 10px 20px; background: #ff6633; color: white; border: none; border-radius: 5px; cursor: pointer;">Wake Server</button>
+                        <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">After clicking, wait 10-15 seconds and try again.</p>
                     </div>
                 `;
             }
