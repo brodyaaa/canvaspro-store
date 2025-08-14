@@ -850,7 +850,7 @@
             </div>
             
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-primary" id="paymentContinueBtn" onclick="proceedWithPayment()" disabled>Continue to Payment</button>
+                <button class="modal-btn modal-btn-primary" id="paymentContinueBtn" onclick="proceedWithPayment()" disabled>Select a Payment Method</button>
                 <button class="modal-btn modal-btn-secondary" onclick="backToEmail()">Back</button>
             </div>
         </div>
@@ -1074,12 +1074,13 @@
         // Configuration - ONLY PUBLIC KEYS (No secrets in frontend!)
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Q5Nc0RxWQL4Y9dFHlBVJzJWy9zBv3g1S7T1xQdYHgp5e6hJWj1EI6YsNZqr9xXIDJD5BSPDT9EJl3dWKwtJfrEa00BVfJzoQh';
         const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
-        
-        // Debug mode - set to true to see console logs
-        const DEBUG_MODE = true;
 
         // Initialize Stripe with publishable key (safe for frontend)
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+
+        console.log('🚀 LearnLabs initialized');
+        console.log('Backend URL:', BACKEND_URL);
+        console.log('Frontend URL:', window.location.origin);
 
         // Store current checkout info
         let currentCheckoutData = {
@@ -1096,9 +1097,7 @@
             currentCheckoutData.email = null;
             currentCheckoutData.paymentMethod = null;
             
-            if (DEBUG_MODE) {
-                console.log('Opening email modal with plan:', plan, 'price:', price);
-            }
+            console.log('Opening email modal with plan:', plan, 'price:', price);
             
             const modal = document.getElementById('emailModal');
             const input = document.getElementById('modalEmailInput');
@@ -1196,9 +1195,7 @@
 
         // Select payment method
         function selectPaymentMethod(method) {
-            if (DEBUG_MODE) {
-                console.log('Payment method selected:', method);
-            }
+            console.log('Payment method selected:', method);
             
             currentCheckoutData.paymentMethod = method;
             
@@ -1222,13 +1219,11 @@
             // Enable continue button
             btn.disabled = false;
             
-            if (DEBUG_MODE) {
-                console.log('Button state after selection:', { 
-                    disabled: btn.disabled, 
-                    text: btn.innerHTML,
-                    checkoutData: currentCheckoutData 
-                });
-            }
+            console.log('Button state after selection:', { 
+                disabled: btn.disabled, 
+                text: btn.innerHTML,
+                checkoutData: currentCheckoutData 
+            });
         }
 
         // Proceed with payment
@@ -1441,22 +1436,47 @@
 
         // Check backend connectivity on page load
         window.addEventListener('DOMContentLoaded', async () => {
-            if (DEBUG_MODE) {
-                console.log('Page loaded. Checking backend connectivity...');
-                try {
-                    const response = await fetch(`${BACKEND_URL}/api/health`);
-                    const data = await response.json();
-                    console.log('Backend health check:', data);
-                    if (data.status === 'ok') {
-                        console.log('✅ Backend is reachable');
-                    } else {
-                        console.warn('⚠️ Backend returned unexpected status:', data);
+            console.log('🔍 Checking backend connectivity...');
+            console.log('Backend URL:', BACKEND_URL);
+            console.log('Current Origin:', window.location.origin);
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
                     }
-                } catch (error) {
-                    console.error('❌ Backend connectivity error:', error);
-                    console.error('Make sure your backend is running at:', BACKEND_URL);
-                    console.error('And CORS is properly configured to allow requests from:', window.location.origin);
+                });
+                
+                const data = await response.json();
+                console.log('✅ Backend health check response:', data);
+                
+                if (data.status === 'ok') {
+                    console.log('✅ Backend is running and reachable');
+                    
+                    // Also check config endpoint
+                    try {
+                        const configResponse = await fetch(`${BACKEND_URL}/api/config`);
+                        const configData = await configResponse.json();
+                        console.log('📋 Backend config:', configData);
+                        
+                        if (configData.testMode) {
+                            console.log('⚠️ Backend is in TEST MODE (Stripe not configured)');
+                        } else {
+                            console.log('✅ Backend has Stripe configured');
+                        }
+                    } catch (e) {
+                        console.error('❌ Could not fetch config:', e);
+                    }
+                } else {
+                    console.warn('⚠️ Backend returned unexpected status:', data);
                 }
+            } catch (error) {
+                console.error('❌ Backend connectivity error:', error);
+                console.error('Make sure:');
+                console.error('1. Your backend is running at:', BACKEND_URL);
+                console.error('2. CORS is configured to allow:', window.location.origin);
+                console.error('3. The /api/health endpoint exists');
             }
         });
 
