@@ -937,7 +937,7 @@
             
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="proceedWithCheckout()">Continue</button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
+                <button class="modal-btn modal-btn-secondary" onclick="cancelCheckout()">Cancel</button>
             </div>
         </div>
     </div>
@@ -995,7 +995,7 @@
             
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="proceedToPayment()" disabled id="paymentProceedBtn">Continue</button>
-                <button class="modal-btn modal-btn-secondary" onclick="closePaymentModal()">Cancel</button>
+                <button class="modal-btn modal-btn-secondary" onclick="cancelCheckout()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1109,7 +1109,7 @@
             
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-primary" onclick="confirmCryptoPayment()">I've Sent Payment</button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeCryptoModal()">Cancel</button>
+                <button class="modal-btn modal-btn-secondary" onclick="cancelCheckout()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1535,17 +1535,24 @@
             // Close modal on escape key
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    closeEmailModal();
-                    closeVerificationModal();
-                    closePaymentModal();
-                    closeCryptoModal();
+                    // Check if any modal is open and cancel the checkout
+                    const emailModalOpen = document.getElementById('emailModal').classList.contains('show');
+                    const paymentModalOpen = document.getElementById('paymentModal').classList.contains('show');
+                    const cryptoModalOpen = document.getElementById('cryptoModal').classList.contains('show');
+                    const verificationModalOpen = document.getElementById('verificationModal').classList.contains('show');
+                    
+                    if (emailModalOpen || paymentModalOpen || cryptoModalOpen) {
+                        cancelCheckout();
+                    } else if (verificationModalOpen) {
+                        closeVerificationModal();
+                    }
                 }
             });
 
             // Close modals on background click
             document.getElementById('emailModal')?.addEventListener('click', function(e) {
                 if (e.target === this) {
-                    closeEmailModal();
+                    cancelCheckout();
                 }
             });
 
@@ -1557,21 +1564,28 @@
 
             document.getElementById('paymentModal')?.addEventListener('click', function(e) {
                 if (e.target === this) {
-                    closePaymentModal();
+                    cancelCheckout();
                 }
             });
 
             document.getElementById('cryptoModal')?.addEventListener('click', function(e) {
                 if (e.target === this) {
-                    closeCryptoModal();
+                    cancelCheckout();
                 }
             });
         }
 
         // Show email modal
         function showEmailModal(plan, price) {
+            console.log('showEmailModal called with:', { plan, price });
+            
             currentCheckoutPlan = plan;
             currentCheckoutPrice = price;
+            
+            console.log('Set checkout values to:', { 
+                currentCheckoutPlan, 
+                currentCheckoutPrice 
+            });
             
             const modal = document.getElementById('emailModal');
             const input = document.getElementById('modalEmailInput');
@@ -1590,12 +1604,24 @@
             }, 300);
         }
 
-        // Close email modal
+        // Close email modal - only closes UI, doesn't clear data
         function closeEmailModal() {
             const modal = document.getElementById('emailModal');
             modal.classList.remove('show');
+        }
+
+        // Cancel the entire checkout process and clear all data
+        function cancelCheckout() {
+            // Clear all checkout data
             currentCheckoutPlan = null;
             currentCheckoutPrice = null;
+            currentOrderEmail = null;
+            currentPaymentMethod = null;
+            
+            // Close all modals
+            closeEmailModal();
+            closePaymentModal();
+            closeCryptoModal();
         }
 
         // Validate email
@@ -1676,7 +1702,7 @@
         function closePaymentModal() {
             const modal = document.getElementById('paymentModal');
             modal.classList.remove('show');
-            currentPaymentMethod = null;
+            // Don't clear payment method here - use cancelCheckout() to clear everything
             
             // Clear any pending timeouts
             if (paymentTimeoutId) {
@@ -1794,6 +1820,12 @@
             
             // Show confirmation
             alert(`✅ Payment Pending Confirmation\n\nOrder #${orderNumber}\n\nPlease send your transaction ID to:\nsupport@learnlabs.shop\n\nYour license will be activated within 10 minutes of confirmation.`);
+            
+            // Clear checkout data after successful submission
+            currentCheckoutPlan = null;
+            currentCheckoutPrice = null;
+            currentOrderEmail = null;
+            currentPaymentMethod = null;
         }
 
         // Generate license key
@@ -1824,6 +1856,11 @@
             console.log('Payment method:', currentPaymentMethod);
             console.log('Backend URL:', BACKEND_URL);
             console.log('Backend healthy:', backendHealthy);
+            console.log('Checkout data:', {
+                plan: currentCheckoutPlan,
+                price: currentCheckoutPrice,
+                email: currentOrderEmail
+            });
 
             // Check if backend is available
             if (!backendHealthy || !BACKEND_URL) {
@@ -1872,7 +1909,18 @@
 
         // Checkout function - IMPROVED WITH BETTER ERROR HANDLING
         async function checkout(email, plan, price) {
-            console.log('Checkout called:', { email, plan, price, backend: BACKEND_URL });
+            console.log('Checkout called with:', { email, plan, price, backend: BACKEND_URL });
+            console.log('Current stored values:', { 
+                currentCheckoutPlan, 
+                currentCheckoutPrice,
+                currentOrderEmail 
+            });
+            
+            // Validate parameters
+            if (!plan || price === null || price === undefined) {
+                console.error('Missing plan or price!', { plan, price });
+                throw new Error('Invalid checkout parameters. Please try again.');
+            }
             
             // Check if Stripe is loaded
             if (!stripe) {
