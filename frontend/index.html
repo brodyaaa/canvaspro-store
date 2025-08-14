@@ -466,6 +466,141 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Email Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--dark);
+            border: 2px solid var(--primary);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .modal-header img {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+        }
+
+        .modal-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .modal-subtitle {
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 15px 20px;
+            background: var(--darker);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 102, 51, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 102, 51, 0.3);
+        }
+
+        .modal-btn-secondary {
+            background: transparent;
+            color: #aaa;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.9rem;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
         /* Footer */
         footer {
             padding: 40px;
@@ -517,6 +652,30 @@
 </head>
 <body>
     <div class="bg-animation"></div>
+
+    <!-- Email Modal -->
+    <div class="modal-overlay" id="emailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <img src="https://i.imgur.com/OozsIMD.png" alt="LearnLabs">
+                <span class="modal-title">Complete Your Order</span>
+            </div>
+            <p class="modal-subtitle">Enter your email to receive your license key</p>
+            
+            <input type="email" 
+                   class="modal-input" 
+                   id="modalEmailInput" 
+                   placeholder="your@email.com"
+                   autocomplete="email">
+            
+            <div class="error-message" id="emailError">Please enter a valid email address</div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="proceedWithCheckout()">Continue</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Navigation -->
     <nav>
@@ -643,7 +802,7 @@
                     <li>2 device activation</li>
                     <li>24/7 support</li>
                 </ul>
-                <button class="btn btn-primary" onclick="checkout('daily', 3)">Get Daily</button>
+                <button class="btn btn-primary" onclick="showEmailModal('daily', 3)">Get Daily</button>
             </div>
 
             <div class="pricing-card">
@@ -656,7 +815,7 @@
                     <li>24/7 support</li>
                     <li>Save 38%</li>
                 </ul>
-                <button class="btn btn-primary" onclick="checkout('weekly', 13)">Get Weekly</button>
+                <button class="btn btn-primary" onclick="showEmailModal('weekly', 13)">Get Weekly</button>
             </div>
             
             <div class="pricing-card popular">
@@ -670,7 +829,7 @@
                     <li>Priority support</li>
                     <li>Save 67%</li>
                 </ul>
-                <button class="btn btn-primary" onclick="checkout('monthly', 30)">Get Monthly</button>
+                <button class="btn btn-primary" onclick="showEmailModal('monthly', 30)">Get Monthly</button>
             </div>
 
             <div class="pricing-card">
@@ -683,7 +842,7 @@
                     <li>VIP support</li>
                     <li>Save 91%</li>
                 </ul>
-                <button class="btn btn-primary" onclick="checkout('yearly', 100)">Get Yearly</button>
+                <button class="btn btn-primary" onclick="showEmailModal('yearly', 100)">Get Yearly</button>
             </div>
             
             <div class="pricing-card">
@@ -696,7 +855,7 @@
                     <li>VIP support</li>
                     <li>All future updates</li>
                 </ul>
-                <button class="btn btn-primary" onclick="checkout('lifetime', 275)">Get Lifetime</button>
+                <button class="btn btn-primary" onclick="showEmailModal('lifetime', 275)">Get Lifetime</button>
             </div>
         </div>
     </section>
@@ -732,26 +891,88 @@
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
-        // Configuration
+        // Configuration - FIX THE BACKEND URL HERE
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Q5Nc0RxWQL4Y9dFHlBVJzJWy9zBv3g1S7T1xQdYHgp5e6hJWj1EI6YsNZqr9xXIDJD5BSPDT9EJl3dWKwtJfrEa00BVfJzoQh';
         
-        // Get backend URL from environment or default
-        const BACKEND_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3000' 
-            : window.location.origin;
+        // YOUR REPLIT BACKEND URL - Make sure this is correct!
+        const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
 
         // Initialize Stripe
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 
-        // Checkout function
-        async function checkout(plan, price) {
-            const email = prompt('Enter your email address:');
-            if (!email || !email.includes('@')) {
-                alert('Please enter a valid email address');
+        // Store current checkout info
+        let currentCheckoutPlan = null;
+        let currentCheckoutPrice = null;
+
+        // Show email modal
+        function showEmailModal(plan, price) {
+            currentCheckoutPlan = plan;
+            currentCheckoutPrice = price;
+            
+            const modal = document.getElementById('emailModal');
+            const input = document.getElementById('modalEmailInput');
+            const error = document.getElementById('emailError');
+            
+            // Reset modal state
+            input.value = '';
+            error.classList.remove('show');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Focus input after animation
+            setTimeout(() => {
+                input.focus();
+            }, 300);
+        }
+
+        // Close email modal
+        function closeEmailModal() {
+            const modal = document.getElementById('emailModal');
+            modal.classList.remove('show');
+            currentCheckoutPlan = null;
+            currentCheckoutPrice = null;
+        }
+
+        // Validate email
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // Proceed with checkout
+        async function proceedWithCheckout() {
+            const input = document.getElementById('modalEmailInput');
+            const error = document.getElementById('emailError');
+            const email = input.value.trim();
+
+            // Validate email
+            if (!validateEmail(email)) {
+                error.classList.add('show');
+                input.style.borderColor = '#ef4444';
                 return;
             }
 
+            // Hide error if shown
+            error.classList.remove('show');
+            input.style.borderColor = '';
+
+            // Proceed with checkout
+            await checkout(email, currentCheckoutPlan, currentCheckoutPrice);
+            
+            // Close modal
+            closeEmailModal();
+        }
+
+        // Checkout function
+        async function checkout(email, plan, price) {
             try {
+                // Show loading state
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="loading"></span> Processing...';
+                btn.disabled = true;
+
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -773,10 +994,18 @@
                     alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${email}`);
                 } else {
                     alert('Error creating checkout session. Please try again.');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
                 alert('Connection error. Please check your internet connection and try again.');
+                
+                // Reset button
+                if (event.target) {
+                    event.target.innerHTML = originalText;
+                    event.target.disabled = false;
+                }
             }
         }
 
@@ -799,6 +1028,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ lookup })
                 });
+
+                if (!response.ok) {
+                    throw new Error('Server error');
+                }
 
                 const data = await response.json();
 
@@ -839,7 +1072,7 @@
                 resultDiv.innerHTML = `
                     <div style="color: #ef4444;">
                         <h3>❌ Connection Error</h3>
-                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please try again later.</p>
+                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please check if the backend is running at:<br><code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code></p>
                     </div>
                 `;
             }
@@ -848,7 +1081,26 @@
         // Copy to clipboard function
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                alert('License key copied to clipboard!');
+                // Create a temporary toast notification
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: var(--green);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+                toast.textContent = '✓ License key copied!';
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 2000);
             }).catch(() => {
                 alert('Failed to copy. Please select and copy manually.');
             });
@@ -858,6 +1110,27 @@
         document.getElementById('lookupInput')?.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 lookupOrder();
+            }
+        });
+
+        // Enter key support for email modal
+        document.getElementById('modalEmailInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                proceedWithCheckout();
+            }
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeEmailModal();
+            }
+        });
+
+        // Close modal on background click
+        document.getElementById('emailModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEmailModal();
             }
         });
     </script>
