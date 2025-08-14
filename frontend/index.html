@@ -1283,12 +1283,15 @@
             monad: '0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA'
         };
 
-        // Backend URL configuration
+        // Backend URL configuration - UPDATED WITH FALLBACK
         function getBackendUrl() {
             const hostname = window.location.hostname;
             
+            // Primary backend URL for production
+            const REPLIT_BACKEND = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+            
             if (hostname === 'learnlabs.shop' || hostname === 'www.learnlabs.shop') {
-                return 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+                return REPLIT_BACKEND;
             }
             
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -1299,7 +1302,8 @@
                 return window.location.origin;
             }
             
-            return window.location.origin;
+            // Default to Replit backend for any other domain
+            return REPLIT_BACKEND;
         }
 
         const BACKEND_URL = getBackendUrl();
@@ -1609,14 +1613,26 @@
             }
         }
 
-        // Checkout function - FIXED VERSION
+        // Checkout function - IMPROVED ERROR HANDLING
         async function checkout(email, plan, price) {
             try {
+                // Test if backend is reachable first
+                const testResponse = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    mode: 'cors'
+                }).catch(() => null);
+
+                if (!testResponse || !testResponse.ok) {
+                    throw new Error('Backend server is not reachable. Please ensure the server is running.');
+                }
+
                 const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json'
                     },
+                    mode: 'cors',
+                    credentials: 'include',
                     body: JSON.stringify({ 
                         email, 
                         plan, 
@@ -1626,7 +1642,8 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Server responded with ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`Server error (${response.status}): ${errorText}`);
                 }
 
                 const data = await response.json();
@@ -1696,7 +1713,7 @@
             performLookup(lookup, null);
         }
 
-        // Perform the actual lookup
+        // Perform the actual lookup - IMPROVED ERROR HANDLING
         async function performLookup(lookup, verification) {
             const resultDiv = document.getElementById('lookupResult');
 
@@ -1704,9 +1721,34 @@
             resultDiv.classList.add('show');
 
             try {
+                // Test if backend is reachable first
+                const testResponse = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    mode: 'cors'
+                }).catch(() => null);
+
+                if (!testResponse || !testResponse.ok) {
+                    resultDiv.innerHTML = `
+                        <div style="color: #ef4444;">
+                            <h3>❌ Backend Server Offline</h3>
+                            <p style="margin-top: 15px; color: #aaa;">The backend server is not responding. This could mean:</p>
+                            <ul style="text-align: left; color: #aaa; margin-top: 10px;">
+                                <li>The Replit server is sleeping (visit the Replit URL to wake it)</li>
+                                <li>The server crashed and needs to be restarted</li>
+                                <li>Network connectivity issues</li>
+                            </ul>
+                            <p style="margin-top: 15px; color: #ffa366;">Backend URL: <code style="background: #333; padding: 5px; border-radius: 5px;">${BACKEND_URL}</code></p>
+                            <a href="${BACKEND_URL}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Click here to wake up the server</a>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const response = await fetch(`${BACKEND_URL}/api/client/lookup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors',
+                    credentials: 'include',
                     body: JSON.stringify({ 
                         lookup,
                         verification: verification 
@@ -1714,7 +1756,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Server error');
+                    throw new Error(`Server error: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -1757,7 +1799,10 @@
                 resultDiv.innerHTML = `
                     <div style="color: #ef4444;">
                         <h3>❌ Connection Error</h3>
-                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please check if the backend is running at:<br><code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code></p>
+                        <p style="margin-top: 15px; color: #aaa;">Unable to connect to the server. Please check if the backend is running at:</p>
+                        <code style="background: #333; padding: 5px; border-radius: 5px; margin-top: 10px; display: inline-block;">${BACKEND_URL}</code>
+                        <p style="margin-top: 15px; color: #ffa366;">Error: ${error.message}</p>
+                        <a href="${BACKEND_URL}" target="_blank" style="color: #3b82f6; text-decoration: underline; display: block; margin-top: 10px;">Click here to wake up the server</a>
                     </div>
                 `;
             }
