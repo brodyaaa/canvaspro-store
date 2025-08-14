@@ -1,25 +1,27 @@
 // server.js - SECURE VERSION FOR REPLIT AND GITHUB
 // NO HARDCODED SECRETS - ALL FROM ENVIRONMENT VARIABLES
-const express = require('express');
-const cors = require('cors');
-const crypto = require('crypto');
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
+const express = require("express");
+const cors = require("cors");
+const crypto = require("crypto");
+const sqlite3 = require("sqlite3").verbose();
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 
-console.log('🚀 Starting Secure CanvasPro Backend...');
+console.log("🚀 Starting Secure CanvasPro Backend...");
 
 // ============================================
 // CONFIGURATION FROM ENVIRONMENT VARIABLES ONLY
 // ============================================
 const CONFIG = {
     // JWT Secret for API authentication
-    JWT_SECRET: process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex'),
+    JWT_SECRET:
+        process.env.JWT_SECRET || crypto.randomBytes(64).toString("hex"),
 
     // API Authentication Token (for Tampermonkey script)
     API_SECRET_TOKEN: process.env.API_SECRET_TOKEN,
@@ -27,8 +29,7 @@ const CONFIG = {
     // Admin credentials - MUST be hashed in production
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH, // Store bcrypt hash, not plain password
-   
- 
+
     // Stripe API Keys
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
@@ -38,18 +39,24 @@ const CONFIG = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
 
     // Encryption keys
-    KEY_ENCRYPTION_KEY: process.env.KEY_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'),
-    KEY_ENCRYPTION_IV: process.env.KEY_ENCRYPTION_IV || crypto.randomBytes(16).toString('hex'),
+    KEY_ENCRYPTION_KEY:
+        process.env.KEY_ENCRYPTION_KEY ||
+        crypto.randomBytes(32).toString("hex"),
+    KEY_ENCRYPTION_IV:
+        process.env.KEY_ENCRYPTION_IV || crypto.randomBytes(16).toString("hex"),
 
     // Security settings
-    ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean),
-    NODE_ENV: process.env.NODE_ENV || 'development',
+    ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || "")
+        .split(",")
+        .filter(Boolean),
+    NODE_ENV: process.env.NODE_ENV || "development",
 
     // Session secret
-    SESSION_SECRET: process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex'),
+    SESSION_SECRET:
+        process.env.SESSION_SECRET || crypto.randomBytes(64).toString("hex"),
 
-    // OpenAI API Key 
-    'OPENAI_API_KEY': process.env.OPENAI_API_KEY, // Set in Replit Secrets
+    // OpenAI API Key
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY, // Set in Replit Secrets
 };
 
 // ============================================
@@ -57,65 +64,77 @@ const CONFIG = {
 // ============================================
 
 // Use Helmet for security headers
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "https:"],
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:", "https:"],
+            },
         },
-    },
-    crossOriginEmbedderPolicy: false
-}));
+        crossOriginEmbedderPolicy: false,
+    }),
+);
 
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
+    message: "Too many requests from this IP, please try again later.",
 });
 
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10, // stricter limit for sensitive endpoints
-    message: 'Too many attempts, please try again later.'
+    message: "Too many attempts, please try again later.",
 });
 
 // Apply rate limiting
-app.use('/api/', apiLimiter);
-app.use('/api/validate-key', strictLimiter);
-app.use('/api/admin/login', strictLimiter);
+app.use("/api/", apiLimiter);
+app.use("/api/validate-key", strictLimiter);
+app.use("/api/admin/login", strictLimiter);
 
 // ============================================
 // ENVIRONMENT VALIDATION
 // ============================================
 function validateEnvironment() {
     const required = [
-        'API_SECRET_TOKEN',
-        'ADMIN_USERNAME', 
-        'ADMIN_PASSWORD_HASH',
-        'JWT_SECRET',
-        'KEY_ENCRYPTION_KEY',
-        'KEY_ENCRYPTION_IV'
+        "API_SECRET_TOKEN",
+        "ADMIN_USERNAME",
+        "ADMIN_PASSWORD_HASH",
+        "JWT_SECRET",
+        "KEY_ENCRYPTION_KEY",
+        "KEY_ENCRYPTION_IV",
     ];
 
-    const missing = required.filter(key => !process.env[key]);
+    const missing = required.filter((key) => !process.env[key]);
 
     if (missing.length > 0) {
-        console.error('❌ CRITICAL: Missing required environment variables:');
-        missing.forEach(key => console.error(`   - ${key}`));
-        console.error('\n📝 Setup Instructions:');
-        console.error('1. In Replit, go to Secrets (🔒 icon)');
-        console.error('2. Add these secrets:');
-        console.error('   API_SECRET_TOKEN: ' + crypto.randomBytes(32).toString('hex'));
-        console.error('   ADMIN_USERNAME: your_admin_username');
-        console.error('   ADMIN_PASSWORD_HASH: (use bcrypt to hash your password)');
-        console.error('   JWT_SECRET: ' + crypto.randomBytes(64).toString('hex'));
-        console.error('   KEY_ENCRYPTION_KEY: ' + crypto.randomBytes(32).toString('hex'));
-        console.error('   KEY_ENCRYPTION_IV: ' + crypto.randomBytes(16).toString('hex'));
+        console.error("❌ CRITICAL: Missing required environment variables:");
+        missing.forEach((key) => console.error(`   - ${key}`));
+        console.error("\n📝 Setup Instructions:");
+        console.error("1. In Replit, go to Secrets (🔒 icon)");
+        console.error("2. Add these secrets:");
+        console.error(
+            "   API_SECRET_TOKEN: " + crypto.randomBytes(32).toString("hex"),
+        );
+        console.error("   ADMIN_USERNAME: your_admin_username");
+        console.error(
+            "   ADMIN_PASSWORD_HASH: (use bcrypt to hash your password)",
+        );
+        console.error(
+            "   JWT_SECRET: " + crypto.randomBytes(64).toString("hex"),
+        );
+        console.error(
+            "   KEY_ENCRYPTION_KEY: " + crypto.randomBytes(32).toString("hex"),
+        );
+        console.error(
+            "   KEY_ENCRYPTION_IV: " + crypto.randomBytes(16).toString("hex"),
+        );
 
-        if (CONFIG.NODE_ENV === 'production') {
+        if (CONFIG.NODE_ENV === "production") {
             process.exit(1);
         }
     }
@@ -128,46 +147,71 @@ const isConfigured = validateEnvironment();
 // ============================================
 // SECURE CORS CONFIGURATION
 // ============================================
+// In server.js, update the CORS configuration:
 const corsOptions = {
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like Tampermonkey)
+    origin: function (origin, callback) {
+        // List of allowed origins
+        const allowedOrigins = [
+            "https://learnlabs.shop",
+            "https://www.learnlabs.shop",
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "http://127.0.0.1:5500",
+        ];
+
+        // Allow requests with no origin
         if (!origin) return callback(null, true);
 
-        // In development, allow all origins
-        if (CONFIG.NODE_ENV !== 'production') {
+        // Check if origin is allowed
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // In production, check allowed origins
-            if (CONFIG.ALLOWED_ORIGINS.includes(origin)) {
+            // In dev, allow all
+            if (process.env.NODE_ENV !== "production") {
                 callback(null, true);
             } else {
-                callback(new Error('Not allowed by CORS'));
+                callback(new Error("Not allowed by CORS"));
             }
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Token', 'stripe-signature']
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-API-Token",
+        "stripe-signature",
+    ],
+    optionsSuccessStatus: 200,
 };
 
 // Middleware order is important!
-app.use('/api/webhook', express.raw({ type: 'application/json' }));
+app.use("/api/webhook", express.raw({ type: "application/json" }));
+
+// Apply CORS
 app.use(cors(corsOptions));
+
+// Handle OPTIONS preflight requests
+app.options("*", cors(corsOptions));
+
+// Then JSON and static files
 app.use(express.json());
-app.use(express.static('./')); // Serve static files for admin panel
+app.use(express.static("./")); // Serve static files for admin panel
 
 // ============================================
 // API AUTHENTICATION MIDDLEWARE
 // ============================================
 function requireApiToken(req, res, next) {
-    const token = req.headers['x-api-token'] || req.headers['authorization']?.replace('Bearer ', '');
+    const token =
+        req.headers["x-api-token"] ||
+        req.headers["authorization"]?.replace("Bearer ", "");
 
     if (!CONFIG.API_SECRET_TOKEN) {
-        return res.status(503).json({ error: 'API not configured' });
+        return res.status(503).json({ error: "API not configured" });
     }
 
     if (!token || token !== CONFIG.API_SECRET_TOKEN) {
-        return res.status(401).json({ error: 'Invalid API token' });
+        return res.status(401).json({ error: "Invalid API token" });
     }
 
     next();
@@ -178,9 +222,9 @@ function requireApiToken(req, res, next) {
 // ============================================
 function generateAdminToken(username) {
     return jwt.sign(
-        { username, role: 'admin', timestamp: Date.now() },
+        { username, role: "admin", timestamp: Date.now() },
         CONFIG.JWT_SECRET,
-        { expiresIn: '4h' }
+        { expiresIn: "4h" },
     );
 }
 
@@ -188,48 +232,53 @@ function requireAdmin(req, res, next) {
     const authHeader = req.headers.authorization;
 
     // Support both JWT and Basic auth for backward compatibility
-    if (authHeader && authHeader.startsWith('Basic ')) {
+    if (authHeader && authHeader.startsWith("Basic ")) {
         // Handle Basic auth for existing admin panels
-        const credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
-        const [username, password] = credentials.split(':');
+        const credentials = Buffer.from(
+            authHeader.slice(6),
+            "base64",
+        ).toString();
+        const [username, password] = credentials.split(":");
 
         if (!CONFIG.ADMIN_USERNAME || !CONFIG.ADMIN_PASSWORD_HASH) {
-            return res.status(503).json({ error: 'Admin not configured' });
+            return res.status(503).json({ error: "Admin not configured" });
         }
 
         // For basic auth, we need to check against a plain password temporarily
         // You should migrate to JWT tokens ASAP
-        bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH).then(valid => {
+        bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH).then((valid) => {
             if (username === CONFIG.ADMIN_USERNAME && valid) {
                 req.adminUser = username;
                 next();
             } else {
-                res.status(403).json({ error: 'Invalid admin credentials' });
+                res.status(403).json({ error: "Invalid admin credentials" });
             }
         });
-    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    } else if (authHeader && authHeader.startsWith("Bearer ")) {
         // Handle JWT auth (preferred)
-        const token = authHeader.replace('Bearer ', '');
+        const token = authHeader.replace("Bearer ", "");
 
         try {
             const decoded = jwt.verify(token, CONFIG.JWT_SECRET);
-            if (decoded.role !== 'admin') {
-                return res.status(403).json({ error: 'Insufficient privileges' });
+            if (decoded.role !== "admin") {
+                return res
+                    .status(403)
+                    .json({ error: "Insufficient privileges" });
             }
             req.adminUser = decoded.username;
             next();
         } catch (error) {
-            return res.status(401).json({ error: 'Invalid or expired token' });
+            return res.status(401).json({ error: "Invalid or expired token" });
         }
     } else {
-        return res.status(401).json({ error: 'Admin authentication required' });
+        return res.status(401).json({ error: "Admin authentication required" });
     }
 }
 
 // ============================================
 // SECURE DATABASE SETUP
 // ============================================
-const db = new sqlite3.Database('./keys.db');
+const db = new sqlite3.Database("./keys.db");
 
 db.serialize(() => {
     // Create tables with proper constraints
@@ -315,51 +364,61 @@ db.serialize(() => {
         answer TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
-    
+
     // Create indexes for performance
     db.run(`CREATE INDEX IF NOT EXISTS idx_keys_email ON keys(email)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_keys_active ON keys(is_active)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_devices_key ON key_devices(key_id)`);
 
-    console.log('✅ Secure database initialized');
-
+    console.log("✅ Secure database initialized");
 });
-
 
 // ============================================
 // SECURE ENCRYPTION FUNCTIONS
 // ============================================
 function encryptKey(key) {
     try {
-        const algorithm = 'aes-256-cbc';
-        const keyBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, '0'));
-        const ivBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, '0'));
+        const algorithm = "aes-256-cbc";
+        const keyBuffer = Buffer.from(
+            CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, "0"),
+        );
+        const ivBuffer = Buffer.from(
+            CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, "0"),
+        );
 
         const cipher = crypto.createCipheriv(algorithm, keyBuffer, ivBuffer);
-        let encrypted = cipher.update(key, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
+        let encrypted = cipher.update(key, "utf8", "hex");
+        encrypted += cipher.final("hex");
 
         return encrypted;
     } catch (error) {
-        console.error('Encryption error:', error);
+        console.error("Encryption error:", error);
         // Fallback to hash if encryption fails
-        return crypto.createHash('sha256').update(key).digest('hex');
+        return crypto.createHash("sha256").update(key).digest("hex");
     }
 }
 
 function decryptKey(encryptedKey) {
     try {
-        const algorithm = 'aes-256-cbc';
-        const keyBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, '0'));
-        const ivBuffer = Buffer.from(CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, '0'));
+        const algorithm = "aes-256-cbc";
+        const keyBuffer = Buffer.from(
+            CONFIG.KEY_ENCRYPTION_KEY.substring(0, 32).padEnd(32, "0"),
+        );
+        const ivBuffer = Buffer.from(
+            CONFIG.KEY_ENCRYPTION_IV.substring(0, 16).padEnd(16, "0"),
+        );
 
-        const decipher = crypto.createDecipheriv(algorithm, keyBuffer, ivBuffer);
-        let decrypted = decipher.update(encryptedKey, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
+        const decipher = crypto.createDecipheriv(
+            algorithm,
+            keyBuffer,
+            ivBuffer,
+        );
+        let decrypted = decipher.update(encryptedKey, "hex", "utf8");
+        decrypted += decipher.final("utf8");
 
         return decrypted;
     } catch (error) {
-        console.error('Decryption error:', error);
+        console.error("Decryption error:", error);
         return null;
     }
 }
@@ -370,26 +429,26 @@ function decryptKey(encryptedKey) {
 function generateLicenseKey() {
     const segments = [];
     for (let i = 0; i < 4; i++) {
-        segments.push(crypto.randomBytes(2).toString('hex').toUpperCase());
+        segments.push(crypto.randomBytes(2).toString("hex").toUpperCase());
     }
-    return segments.join('-');
+    return segments.join("-");
 }
 
 function generateOrderNumber() {
     const timestamp = Date.now().toString(36).toUpperCase();
-    const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const random = crypto.randomBytes(3).toString("hex").toUpperCase();
     return `CP-${timestamp}-${random}`;
 }
 
 function getExpiryDate(plan) {
     const now = new Date();
     const expiryMap = {
-        'test': () => now.setHours(now.getHours() + 1),
-        'daily': () => now.setDate(now.getDate() + 1),
-        'weekly': () => now.setDate(now.getDate() + 7),
-        'monthly': () => now.setMonth(now.getMonth() + 1),
-        'yearly': () => now.setFullYear(now.getFullYear() + 1),
-        'lifetime': () => now.setFullYear(now.getFullYear() + 100)
+        test: () => now.setHours(now.getHours() + 1),
+        daily: () => now.setDate(now.getDate() + 1),
+        weekly: () => now.setDate(now.getDate() + 7),
+        monthly: () => now.setMonth(now.getMonth() + 1),
+        yearly: () => now.setFullYear(now.getFullYear() + 1),
+        lifetime: () => now.setFullYear(now.getFullYear() + 100),
     };
 
     if (expiryMap[plan]) {
@@ -401,62 +460,121 @@ function getExpiryDate(plan) {
     return now;
 }
 
-// Initialize Stripe if configured
+// Initialize Stripe - IMPROVED VERSION
 let stripe = null;
 if (CONFIG.STRIPE_SECRET_KEY) {
     try {
-        stripe = require('stripe')(CONFIG.STRIPE_SECRET_KEY);
-        console.log('✅ Stripe initialized');
+        stripe = require("stripe")(CONFIG.STRIPE_SECRET_KEY);
+        console.log(
+            "✅ Stripe initialized with key:",
+            CONFIG.STRIPE_SECRET_KEY.substring(0, 20) + "...",
+        );
+
+        // Test Stripe connection
+        stripe.products
+            .list({ limit: 1 })
+            .then(() => {
+                console.log("✅ Stripe API connection verified!");
+            })
+            .catch((err) => {
+                console.error("❌ Stripe API test failed:", err.message);
+            });
     } catch (error) {
-        console.error('❌ Stripe initialization failed:', error.message);
+        console.error("❌ Stripe initialization failed:", error.message);
     }
+} else {
+    console.error("❌ NO STRIPE_SECRET_KEY IN ENVIRONMENT!");
 }
 
 // Initialize Resend if configured
 let resend = null;
 if (CONFIG.RESEND_API_KEY) {
     try {
-        const { Resend } = require('resend');
+        const { Resend } = require("resend");
         resend = new Resend(CONFIG.RESEND_API_KEY);
-        console.log('✅ Resend initialized');
+        console.log("✅ Resend initialized");
     } catch (error) {
-        console.error('❌ Resend initialization failed:', error.message);
+        console.error("❌ Resend initialization failed:", error.message);
     }
 }
 
 // Email sending function
+// Replace the sendOrderEmail function with this enhanced version:
 async function sendOrderEmail(order) {
     if (!resend) {
-        console.log('⚠️ Skipping email - Resend not configured');
+        console.log("⚠️ Skipping email - Resend not configured");
+        // Check if RESEND_API_KEY exists
+        if (!CONFIG.RESEND_API_KEY) {
+            console.error(
+                "❌ RESEND_API_KEY not set in environment variables!",
+            );
+        }
         return false;
     }
 
+    // Customize message based on plan
+    const planMessages = {
+        daily: "Your daily access expires in 24 hours",
+        weekly: "Enjoy 7 days of unlimited access",
+        monthly: "You have 30 days of premium access",
+        yearly: "Welcome to our yearly plan - 365 days of automation!",
+        lifetime: "Congratulations! You now have lifetime access!",
+    };
+
+    const planColors = {
+        daily: "#3b82f6",
+        weekly: "#10b981",
+        monthly: "#ff6633",
+        yearly: "#6b46c1",
+        lifetime: "#fbbf24",
+    };
+
     try {
-        await resend.emails.send({
-            from: 'CanvasPro <onboarding@resend.dev>',
+        const emailResult = await resend.emails.send({
+            from: "LearnLabs <onboarding@resend.dev>",
             to: [order.email],
-            subject: `Your CanvasPro License Key - Order #${order.orderNumber}`,
+            subject: `Your LearnLabs ${order.plan} License Key - Order #${order.orderNumber}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="background: linear-gradient(135deg, #ff6633, #ff8855); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
-                        <h1 style="margin: 0;">Welcome to CanvasPro! 🎉</h1>
+                    <div style="background: linear-gradient(135deg, ${planColors[order.plan] || "#ff6633"}, #ff8855); padding: 30px; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                        <h1 style="margin: 0;">Welcome to LearnLabs! 🎉</h1>
+                        <p style="margin-top: 10px; font-size: 1.2rem;">${order.plan.toUpperCase()} PLAN</p>
                     </div>
                     <div style="padding: 30px; background: #f5f5f5;">
                         <h2 style="color: #333;">Order #${order.orderNumber}</h2>
-                        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                            <h3 style="color: #ff6633; margin-top: 0;">🔑 Your License Key:</h3>
-                            <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; font-size: 20px; font-family: monospace; text-align: center; border: 2px dashed #ff6633;">
+                        <p style="color: #666; font-size: 1.1rem;">${planMessages[order.plan] || "Thank you for your purchase!"}</p>
+
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="color: ${planColors[order.plan] || "#ff6633"}; margin-top: 0;">🔑 Your License Key:</h3>
+                            <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; font-size: 20px; font-family: monospace; text-align: center; border: 2px dashed ${planColors[order.plan] || "#ff6633"};">
                                 ${order.licenseKey}
                             </div>
                         </div>
+
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <h4 style="color: #333; margin-top: 0;">Plan Details:</h4>
+                            <ul style="color: #666; line-height: 1.8;">
+                                <li><strong>Product:</strong> CanvasPro</li>
+                                <li><strong>Plan:</strong> ${order.plan}</li>
+                                <li><strong>Expires:</strong> ${new Date(order.expiresAt).toLocaleDateString()}</li>
+                                <li><strong>Devices:</strong> 2 simultaneous devices</li>
+                            </ul>
+                        </div>
+
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="https://learnlabs.shop" style="background: ${planColors[order.plan] || "#ff6633"}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block;">Visit Dashboard</a>
+                        </div>
                     </div>
                 </div>
-            `
+            `,
         });
-        console.log('✅ Email sent successfully to:', order.email);
+
+        console.log("✅ Email sent successfully to:", order.email);
+        console.log("📧 Email ID:", emailResult.id);
         return true;
     } catch (error) {
-        console.error('❌ Email error:', error.message);
+        console.error("❌ Email error:", error.message);
+        console.error("Full error:", error);
         return false;
     }
 }
@@ -466,55 +584,57 @@ async function sendOrderEmail(order) {
 // ============================================
 
 // Root endpoint
-app.get('/', (req, res) => {
-    res.json({ 
-        status: 'CanvasPro Backend Running',
-        version: '3.0.0',
+app.get("/", (req, res) => {
+    res.json({
+        status: "CanvasPro Backend Running",
+        version: "3.0.0",
         secure: true,
         endpoints: {
-            health: '/api/health',
-            config: '/api/config',
-            validateKey: '/api/validate-key',
-            checkout: '/api/create-checkout',
-            webhook: '/api/webhook',
+            health: "/api/health",
+            config: "/api/config",
+            validateKey: "/api/validate-key",
+            checkout: "/api/create-checkout",
+            webhook: "/api/webhook",
             admin: {
-                login: '/api/admin/login',
-                stats: '/api/admin/stats',
-                keys: '/api/admin/keys',
-                orders: '/api/admin/orders',
-                generateKey: '/api/admin/generate-key'
-            }
-        }
+                login: "/api/admin/login",
+                stats: "/api/admin/stats",
+                keys: "/api/admin/keys",
+                orders: "/api/admin/orders",
+                generateKey: "/api/admin/generate-key",
+            },
+        },
     });
 });
 
 // Health check endpoint (public)
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+app.get("/api/health", (req, res) => {
+    res.json({
+        status: "ok",
         timestamp: new Date().toISOString(),
-        configured: isConfigured
+        configured: isConfigured,
     });
 });
 
 // Public config endpoint (REQUIRED for Tampermonkey to get API token)
-app.get('/api/config', (req, res) => {
-    res.json({ 
-        stripePublishableKey: CONFIG.STRIPE_PUBLISHABLE_KEY || '',
+app.get("/api/config", (req, res) => {
+    res.json({
+        stripePublishableKey: CONFIG.STRIPE_PUBLISHABLE_KEY || "",
         testMode: !CONFIG.STRIPE_SECRET_KEY,
-        version: '3.0.0',
-        apiToken: CONFIG.API_SECRET_TOKEN // This sends the token to Tampermonkey
+        version: "3.0.0",
+        apiToken: CONFIG.API_SECRET_TOKEN, // This sends the token to Tampermonkey
     });
 });
 
 // Key validation endpoint (requires API token)
-app.post('/api/validate-key', requireApiToken, async (req, res) => {
+app.post("/api/validate-key", requireApiToken, async (req, res) => {
     const { key, deviceId } = req.body;
     const ip = req.ip || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'] || '';
+    const userAgent = req.headers["user-agent"] || "";
 
     if (!key || !deviceId) {
-        return res.status(400).json({ valid: false, error: 'Missing required fields' });
+        return res
+            .status(400)
+            .json({ valid: false, error: "Missing required fields" });
     }
 
     // Use prepared statement to prevent SQL injection
@@ -523,8 +643,10 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
         [key],
         async (err, keyData) => {
             if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ valid: false, error: 'Database error' });
+                console.error("Database error:", err);
+                return res
+                    .status(500)
+                    .json({ valid: false, error: "Database error" });
             }
 
             if (!keyData) {
@@ -532,19 +654,22 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                 db.run(
                     `INSERT INTO key_logs (device_id, ip_address, user_agent, success, error_message)
                      VALUES (?, ?, ?, 0, ?)`,
-                    [deviceId, ip, userAgent, 'Invalid key']
+                    [deviceId, ip, userAgent, "Invalid key"],
                 );
-                return res.json({ valid: false, error: 'Invalid key' });
+                return res.json({ valid: false, error: "Invalid key" });
             }
 
             // Check expiration
-            if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
+            if (
+                keyData.expires_at &&
+                new Date(keyData.expires_at) < new Date()
+            ) {
                 db.run(
                     `INSERT INTO key_logs (key_id, device_id, ip_address, user_agent, success, error_message)
                      VALUES (?, ?, ?, ?, 0, ?)`,
-                    [keyData.id, deviceId, ip, userAgent, 'Key expired']
+                    [keyData.id, deviceId, ip, userAgent, "Key expired"],
                 );
-                return res.json({ valid: false, error: 'Key expired' });
+                return res.json({ valid: false, error: "Key expired" });
             }
 
             // Device binding check
@@ -553,10 +678,14 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                 [keyData.id],
                 (err, devices) => {
                     if (err) {
-                        return res.status(500).json({ valid: false, error: 'Database error' });
+                        return res
+                            .status(500)
+                            .json({ valid: false, error: "Database error" });
                     }
 
-                    const existingDevice = devices.find(d => d.device_id === deviceId);
+                    const existingDevice = devices.find(
+                        (d) => d.device_id === deviceId,
+                    );
                     const maxDevices = 2;
 
                     if (existingDevice) {
@@ -564,30 +693,37 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                         db.run(
                             `UPDATE key_devices SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 
                              WHERE key_id = ? AND device_id = ?`,
-                            [keyData.id, deviceId]
+                            [keyData.id, deviceId],
                         );
                     } else if (devices.length >= maxDevices) {
                         // Too many devices
                         db.run(
                             `INSERT INTO key_logs (key_id, device_id, ip_address, user_agent, success, error_message)
                              VALUES (?, ?, ?, ?, 0, ?)`,
-                            [keyData.id, deviceId, ip, userAgent, 'Device limit exceeded']
+                            [
+                                keyData.id,
+                                deviceId,
+                                ip,
+                                userAgent,
+                                "Device limit exceeded",
+                            ],
                         );
-                        return res.json({ 
-                            valid: false, 
-                            error: `Key already bound to ${maxDevices} device(s)` 
+                        return res.json({
+                            valid: false,
+                            error: `Key already bound to ${maxDevices} device(s)`,
                         });
                     } else {
                         // Bind new device
-                        const fingerprint = crypto.createHash('sha256')
+                        const fingerprint = crypto
+                            .createHash("sha256")
                             .update(userAgent + deviceId)
-                            .digest('hex')
+                            .digest("hex")
                             .substring(0, 16);
 
                         db.run(
                             `INSERT INTO key_devices (key_id, device_id, device_fingerprint)
                              VALUES (?, ?, ?)`,
-                            [keyData.id, deviceId, fingerprint]
+                            [keyData.id, deviceId, fingerprint],
                         );
                     }
 
@@ -595,14 +731,14 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                     db.run(
                         `UPDATE keys SET last_used_at = CURRENT_TIMESTAMP, usage_count = usage_count + 1 
                          WHERE id = ?`,
-                        [keyData.id]
+                        [keyData.id],
                     );
 
                     // Log successful validation
                     db.run(
                         `INSERT INTO key_logs (key_id, device_id, ip_address, user_agent, success)
                          VALUES (?, ?, ?, ?, 1)`,
-                        [keyData.id, deviceId, ip, userAgent]
+                        [keyData.id, deviceId, ip, userAgent],
                     );
 
                     res.json({
@@ -615,31 +751,25 @@ app.post('/api/validate-key', requireApiToken, async (req, res) => {
                         features: {
                             autoAdvance: true,
                             autoAnswers: true,
-                            antiLogout: true
-                        }
+                            antiLogout: true,
+                        },
                     });
-                }
+                },
             );
-        }
+        },
     );
 });
 
-// Key Validation endpoint (requires API token )
-// Key validation endpoint (requires API token)
-app.post('/api/validate-key', requireApiToken, async (req, res) => {
-    // ... existing validation code ...
-});
-
-// AI Answer endpoint (requires API token) - ADD THIS NEW ENDPOINT HERE
-app.post('/api/answer-question', requireApiToken, async (req, res) => {
+// AI Answer endpoint (requires API token)
+app.post("/api/answer-question", requireApiToken, async (req, res) => {
     const { question, choices, type } = req.body;
 
     if (!process.env.OPENAI_API_KEY) {
-        return res.json({ success: false, error: 'AI not configured' });
+        return res.json({ success: false, error: "AI not configured" });
     }
 
     try {
-        const { OpenAI } = require('openai');
+        const { OpenAI } = require("openai");
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
         const completion = await openai.chat.completions.create({
@@ -647,15 +777,16 @@ app.post('/api/answer-question', requireApiToken, async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: "You are helping a student with disabilities complete their coursework. Provide accurate, educational answers."
+                    content:
+                        "You are helping a student with disabilities complete their coursework. Provide accurate, educational answers.",
                 },
                 {
                     role: "user",
-                    content: `Question: ${question}\n${type === 'mc' ? 'Choices: ' + choices.join(', ') : ''}\nProvide the best answer.`
-                }
+                    content: `Question: ${question}\n${type === "mc" ? "Choices: " + choices.join(", ") : ""}\nProvide the best answer.`,
+                },
             ],
             max_tokens: 150,
-            temperature: 0.3
+            temperature: 0.3,
         });
 
         const answer = completion.choices[0].message.content;
@@ -663,135 +794,131 @@ app.post('/api/answer-question', requireApiToken, async (req, res) => {
         // Log for compliance/auditing
         db.run(
             `INSERT INTO answer_logs (question, answer, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)`,
-            [question.substring(0, 100), answer.substring(0, 100)]
+            [question.substring(0, 100), answer.substring(0, 100)],
         );
 
         res.json({ success: true, answer });
     } catch (error) {
-        console.error('OpenAI error:', error);
-        res.json({ success: false, error: 'Failed to generate answer' });
+        console.error("OpenAI error:", error);
+        res.json({ success: false, error: "Failed to generate answer" });
     }
 });
 
-// Create checkout session (Stripe) - this already exists
-app.post('/api/create-checkout', async (req, res) => {
-    // ... existing code ...
-});
-// Create checkout session (Stripe)
-app.post('/api/create-checkout', async (req, res) => {
+// FIXED Create checkout session (Stripe) - HANDLES NULL VALUES PROPERLY
+app.post("/api/create-checkout", async (req, res) => {
     try {
-        const { email, plan = 'weekly', price = 13, product = 'canvaspro' } = req.body;
+        // Extract parameters with proper null handling
+        const { email, plan, price, product } = req.body;
 
-        console.log('📝 Creating checkout:', { email, plan, price, product });
+        // Set defaults for any null/undefined values
+        const finalPlan = plan || "monthly";
+        const finalPrice = price || 30;
+        const finalProduct = product || "canvaspro";
 
-        if (!email || !email.includes('@')) {
-            return res.status(400).json({ error: 'Valid email required' });
-        }
-
-        // Test mode if Stripe not configured
-        if (!stripe) {
-            console.log('🧪 Test mode - generating license');
-
-            const orderNumber = generateOrderNumber();
-            const licenseKey = generateLicenseKey();
-            const encryptedKey = encryptKey(licenseKey);
-            const expiresAt = getExpiryDate(plan);
-
-            db.run(
-                `INSERT INTO keys (key, encrypted_key, email, product, plan, price, expires_at, is_active, created_by) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'system')`,
-                [licenseKey, encryptedKey, email, product, plan, price, expiresAt.toISOString()],
-                async function(err) {
-                    if (err) {
-                        console.error('❌ Database error:', err);
-                        return res.status(500).json({ error: 'Database error' });
-                    }
-
-                    const keyId = this.lastID;
-
-                    db.run(
-                        `INSERT INTO orders (order_number, email, product, plan, amount, key_id, status) 
-                         VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
-                        [orderNumber, email, product, plan, price, keyId]
-                    );
-
-                    await sendOrderEmail({
-                        orderNumber,
-                        licenseKey,
-                        email,
-                        plan,
-                        expiresAt
-                    });
-
-                    res.json({ 
-                        success: true,
-                        testMode: true,
-                        orderNumber,
-                        license: licenseKey,
-                        plan,
-                        expires: expiresAt.toISOString()
-                    });
-                }
-            );
-            return;
-        }
-
-        // Real Stripe checkout
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            customer_email: email,
-            line_items: [{
-                price_data: {
-                    currency: 'usd',
-                    product_data: {
-                        name: `CanvasPro ${plan.charAt(0).toUpperCase() + plan.slice(1)} License`,
-                        description: `${plan} access to CanvasPro automation tools`,
-                        images: ['https://i.imgur.com/OozsIMD.png']
-                    },
-                    unit_amount: Math.round(price * 100),
-                },
-                quantity: 1,
-            }],
-            mode: 'payment',
-            success_url: `${process.env.FRONTEND_URL || 'https://learnlabs.shop'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL || 'https://learnlabs.shop'}`,
-            metadata: { email, plan, product, price: price.toString() }
+        console.log("📝 Creating checkout:", {
+            email,
+            plan: finalPlan,
+            price: finalPrice,
+            product: finalProduct,
         });
 
-        console.log('✅ Stripe session created:', session.id);
+        if (!email || !email.includes("@")) {
+            return res.status(400).json({ error: "Valid email required" });
+        }
+
+        // Check if Stripe is configured
+        if (!CONFIG.STRIPE_SECRET_KEY) {
+            console.error("❌ STRIPE_SECRET_KEY not found in environment!");
+            return res.status(500).json({
+                error: "Payment system not configured. Contact support.",
+                debug: "No Stripe secret key in environment",
+            });
+        }
+
+        // Initialize Stripe if not already initialized
+        if (!stripe) {
+            console.log("🔄 Initializing Stripe on demand...");
+            const Stripe = require("stripe");
+            stripe = Stripe(CONFIG.STRIPE_SECRET_KEY);
+            console.log(
+                "✅ Stripe initialized with key:",
+                CONFIG.STRIPE_SECRET_KEY.substring(0, 20) + "...",
+            );
+        }
+
+        // Create proper plan name with null safety
+        const planName = finalPlan.charAt(0).toUpperCase() + finalPlan.slice(1);
+
+        console.log("📤 Creating Stripe session for:", planName);
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            customer_email: email,
+            line_items: [
+                {
+                    price_data: {
+                        currency: "usd",
+                        product_data: {
+                            name: `CanvasPro ${planName} License`,
+                            description: `${finalPlan} access to CanvasPro automation tools`,
+                            images: ["https://i.imgur.com/OozsIMD.png"],
+                        },
+                        unit_amount: Math.round(finalPrice * 100),
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: "payment",
+            success_url: `${process.env.FRONTEND_URL || "https://learnlabs.shop"}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL || "https://learnlabs.shop"}`,
+            metadata: {
+                email,
+                plan: finalPlan,
+                product: finalProduct,
+                price: finalPrice.toString(),
+            },
+        });
+
+        console.log("✅ Stripe session created:", session.id);
+        console.log("✅ Checkout URL:", session.url);
+
         res.json({ url: session.url });
     } catch (error) {
-        console.error('❌ Checkout error:', error);
-        res.status(500).json({ 
-            error: 'Failed to create checkout session',
-            details: error.message 
+        console.error("❌ Checkout error:", error);
+        console.error("Full error stack:", error.stack);
+
+        // Provide detailed error response
+        res.status(500).json({
+            error: "Failed to create checkout session",
+            details: error.message,
+            type: error.type || "unknown",
         });
     }
 });
 
 // Stripe webhook
-app.post('/api/webhook', async (req, res) => {
+app.post("/api/webhook", async (req, res) => {
     if (!stripe) {
-        return res.status(400).json({ error: 'Stripe not configured' });
+        return res.status(400).json({ error: "Stripe not configured" });
     }
 
-    const sig = req.headers['stripe-signature'];
+    const sig = req.headers["stripe-signature"];
     let event;
 
     try {
         event = stripe.webhooks.constructEvent(
             req.body,
             sig,
-            CONFIG.STRIPE_WEBHOOK_SECRET
+            CONFIG.STRIPE_WEBHOOK_SECRET,
         );
     } catch (err) {
-        console.error('❌ Webhook signature verification failed:', err.message);
+        console.error("❌ Webhook signature verification failed:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    console.log('📨 Webhook received:', event.type);
+    console.log("📨 Webhook received:", event.type);
 
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === "checkout.session.completed") {
         const session = event.data.object;
 
         const orderNumber = generateOrderNumber();
@@ -806,15 +933,15 @@ app.post('/api/webhook', async (req, res) => {
                 licenseKey,
                 encryptedKey,
                 session.customer_email || session.metadata.email,
-                session.metadata.product || 'canvaspro',
+                session.metadata.product || "canvaspro",
                 session.metadata.plan,
                 parseFloat(session.metadata.price),
                 session.id,
-                expiresAt.toISOString()
+                expiresAt.toISOString(),
             ],
-            async function(err) {
+            async function (err) {
                 if (err) {
-                    console.error('❌ Database error in webhook:', err);
+                    console.error("❌ Database error in webhook:", err);
                     return;
                 }
 
@@ -826,12 +953,12 @@ app.post('/api/webhook', async (req, res) => {
                     [
                         orderNumber,
                         session.customer_email || session.metadata.email,
-                        session.metadata.product || 'canvaspro',
+                        session.metadata.product || "canvaspro",
                         session.metadata.plan,
                         parseFloat(session.metadata.price),
                         keyId,
-                        session.id
-                    ]
+                        session.id,
+                    ],
                 );
 
                 await sendOrderEmail({
@@ -839,11 +966,14 @@ app.post('/api/webhook', async (req, res) => {
                     licenseKey,
                     email: session.customer_email || session.metadata.email,
                     plan: session.metadata.plan,
-                    expiresAt
+                    expiresAt,
                 });
 
-                console.log('✅ Webhook order processed:', { orderNumber, email: session.customer_email });
-            }
+                console.log("✅ Webhook order processed:", {
+                    orderNumber,
+                    email: session.customer_email,
+                });
+            },
         );
     }
 
@@ -851,11 +981,11 @@ app.post('/api/webhook', async (req, res) => {
 });
 
 // Session lookup
-app.get('/api/session/:sessionId', (req, res) => {
+app.get("/api/session/:sessionId", (req, res) => {
     const { sessionId } = req.params;
 
     if (!sessionId) {
-        return res.status(400).json({ error: 'Session ID required' });
+        return res.status(400).json({ error: "Session ID required" });
     }
 
     db.get(
@@ -866,12 +996,16 @@ app.get('/api/session/:sessionId', (req, res) => {
         [sessionId],
         (err, row) => {
             if (err) {
-                console.error('❌ Database error:', err);
-                return res.status(500).json({ found: false, error: 'Database error' });
+                console.error("❌ Database error:", err);
+                return res
+                    .status(500)
+                    .json({ found: false, error: "Database error" });
             }
 
             if (!row) {
-                return res.status(404).json({ found: false, error: 'Order not found' });
+                return res
+                    .status(404)
+                    .json({ found: false, error: "Order not found" });
             }
 
             res.json({
@@ -881,66 +1015,118 @@ app.get('/api/session/:sessionId', (req, res) => {
                 plan: row.plan,
                 expiresAt: row.expires_at,
                 email: row.email,
-                product: row.product
+                product: row.product,
             });
-        }
+        },
     );
 });
 
 // Client lookup
-app.post('/api/client/lookup', (req, res) => {
-    const { lookup } = req.body;
+app.post("/api/client/lookup", (req, res) => {
+    const { lookup, verification } = req.body;
 
     if (!lookup) {
-        return res.status(400).json({ error: 'Email or license key required' });
+        return res.status(400).json({ error: "Email or license key required" });
     }
 
-    const query = lookup.includes('-') 
-        ? `SELECT * FROM keys WHERE key = ?`
-        : `SELECT * FROM keys WHERE email = ? ORDER BY created_at DESC LIMIT 1`;
+    // If it's a license key format (contains dashes), look it up directly
+    if (lookup.includes("-") && lookup.length === 19) {
+        // Full license key lookup - this is secure
+        db.get(`SELECT * FROM keys WHERE key = ?`, [lookup], (err, row) => {
+            if (err || !row) {
+                return res
+                    .status(404)
+                    .json({ found: false, error: "Order not found" });
+            }
 
-    db.get(query, [lookup], (err, row) => {
-        if (err || !row) {
-            return res.status(404).json({ found: false, error: 'Order not found' });
+            const isExpired = new Date() > new Date(row.expires_at);
+
+            res.json({
+                found: true,
+                order: {
+                    product: row.product,
+                    plan: row.plan,
+                    createdAt: row.created_at,
+                    expiresAt: row.expires_at,
+                    status: isExpired ? "expired" : "active",
+                    licenseKey: row.key,
+                },
+            });
+        });
+    } else if (lookup.includes("@")) {
+        // Email lookup - REQUIRES additional verification
+        if (!verification || verification.length < 4) {
+            return res.status(400).json({
+                error: "For email lookup, please provide the last 4 characters of your license key or order number",
+                requiresVerification: true,
+            });
         }
 
-        const isExpired = new Date() > new Date(row.expires_at);
+        // Query with email AND verification
+        db.get(
+            `SELECT * FROM keys 
+             WHERE email = ? 
+             AND (
+                 SUBSTR(key, -4) = ? OR 
+                 key IN (SELECT k.key FROM keys k JOIN orders o ON o.key_id = k.id WHERE o.order_number LIKE '%' || ? || '%')
+             )
+             ORDER BY created_at DESC 
+             LIMIT 1`,
+            [lookup, verification.toUpperCase(), verification.toUpperCase()],
+            (err, row) => {
+                if (err || !row) {
+                    return res.status(404).json({
+                        found: false,
+                        error: "Order not found. Please check your email and verification code.",
+                    });
+                }
 
-        res.json({
-            found: true,
-            order: {
-                product: row.product,
-                plan: row.plan,
-                createdAt: row.created_at,
-                expiresAt: row.expires_at,
-                status: isExpired ? 'expired' : 'active',
-                licenseKey: row.key
-            }
-        });
-    });
+                const isExpired = new Date() > new Date(row.expires_at);
+
+                res.json({
+                    found: true,
+                    order: {
+                        product: row.product,
+                        plan: row.plan,
+                        createdAt: row.created_at,
+                        expiresAt: row.expires_at,
+                        status: isExpired ? "expired" : "active",
+                        licenseKey: row.key,
+                    },
+                });
+            },
+        );
+    } else {
+        return res.status(400).json({ error: "Invalid lookup format" });
+    }
 });
 
 // Admin login endpoint
-app.post('/api/admin/login', strictLimiter, async (req, res) => {
+app.post("/api/admin/login", strictLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ error: 'Username and password required' });
+        return res
+            .status(400)
+            .json({ error: "Username and password required" });
     }
 
     if (!CONFIG.ADMIN_USERNAME || !CONFIG.ADMIN_PASSWORD_HASH) {
-        return res.status(503).json({ error: 'Admin not configured' });
+        return res.status(503).json({ error: "Admin not configured" });
     }
 
     if (username !== CONFIG.ADMIN_USERNAME) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Verify password against hash
-    const validPassword = await bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH);
+    const validPassword = await bcrypt.compare(
+        password,
+        CONFIG.ADMIN_PASSWORD_HASH,
+    );
 
     if (!validPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Generate JWT token
@@ -950,39 +1136,42 @@ app.post('/api/admin/login', strictLimiter, async (req, res) => {
     db.run(
         `INSERT INTO admin_logs (admin_user, action, ip_address, details)
          VALUES (?, ?, ?, ?)`,
-        [username, 'login', req.ip, 'Successful login']
+        [username, "login", req.ip, "Successful login"],
     );
 
-    res.json({ 
-        success: true, 
+    res.json({
+        success: true,
         token,
-        expiresIn: '4h'
+        expiresIn: "4h",
     });
 });
 
 // Admin stats endpoint
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
+app.get("/api/admin/stats", requireAdmin, (req, res) => {
     const queries = [
         `SELECT COUNT(*) as totalKeys FROM keys WHERE is_active = 1`,
         `SELECT COUNT(*) as activeKeys FROM keys WHERE is_active = 1 AND expires_at > datetime('now')`,
-        `SELECT COALESCE(SUM(amount), 0) as todayRevenue FROM orders WHERE date(created_at) = date('now')`
+        `SELECT COALESCE(SUM(amount), 0) as todayRevenue FROM orders WHERE date(created_at) = date('now')`,
     ];
 
-    Promise.all(queries.map(query => 
-        new Promise((resolve) => {
-            db.get(query, (err, row) => resolve(row || {}));
-        })
-    )).then(results => {
+    Promise.all(
+        queries.map(
+            (query) =>
+                new Promise((resolve) => {
+                    db.get(query, (err, row) => resolve(row || {}));
+                }),
+        ),
+    ).then((results) => {
         res.json({
             totalKeys: results[0].totalKeys || 0,
             activeKeys: results[1].activeKeys || 0,
-            todayRevenue: results[2].todayRevenue || 0
+            todayRevenue: results[2].todayRevenue || 0,
         });
     });
 });
 
 // Admin get all keys
-app.get('/api/admin/keys', requireAdmin, (req, res) => {
+app.get("/api/admin/keys", requireAdmin, (req, res) => {
     db.all(
         `SELECT k.*, 
                 COUNT(kd.id) as device_count,
@@ -994,25 +1183,29 @@ app.get('/api/admin/keys', requireAdmin, (req, res) => {
          LIMIT 100`,
         (err, rows) => {
             if (err) {
-                console.error('❌ Database error:', err);
-                return res.status(500).json({ error: 'Database error' });
+                console.error("❌ Database error:", err);
+                return res.status(500).json({ error: "Database error" });
             }
 
             // Don't send plain text keys to frontend
-            const safeKeys = rows.map(key => ({
+            const safeKeys = rows.map((key) => ({
                 ...key,
-                key_display: key.key ? key.key.substring(0, 4) + '-****-****-' + key.key.substring(key.key.length - 4) : 'HIDDEN',
+                key_display: key.key
+                    ? key.key.substring(0, 4) +
+                      "-****-****-" +
+                      key.key.substring(key.key.length - 4)
+                    : "HIDDEN",
                 key: undefined, // Remove actual key
-                encrypted_key: undefined // Remove encrypted key
+                encrypted_key: undefined, // Remove encrypted key
             }));
 
             res.json(safeKeys);
-        }
+        },
     );
 });
 
 // Admin get all orders
-app.get('/api/admin/orders', requireAdmin, (req, res) => {
+app.get("/api/admin/orders", requireAdmin, (req, res) => {
     db.all(
         `SELECT o.*, k.key 
          FROM orders o
@@ -1021,48 +1214,64 @@ app.get('/api/admin/orders', requireAdmin, (req, res) => {
          LIMIT 100`,
         (err, rows) => {
             if (err) {
-                console.error('❌ Database error:', err);
-                return res.status(500).json({ error: 'Database error' });
+                console.error("❌ Database error:", err);
+                return res.status(500).json({ error: "Database error" });
             }
 
             // Obfuscate keys in orders too
-            const safeOrders = rows.map(order => ({
+            const safeOrders = rows.map((order) => ({
                 ...order,
-                key: order.key ? order.key.substring(0, 4) + '-****-****-' + order.key.substring(order.key.length - 4) : null
+                key: order.key
+                    ? order.key.substring(0, 4) +
+                      "-****-****-" +
+                      order.key.substring(order.key.length - 4)
+                    : null,
             }));
 
             res.json(safeOrders);
-        }
+        },
     );
 });
 
 // Generate key endpoint (admin only)
-app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
+app.post("/api/admin/generate-key", requireAdmin, async (req, res) => {
     const { email, plan, price = 0, customExpiry } = req.body;
     const adminUser = req.adminUser;
 
     if (!email || !plan) {
-        return res.status(400).json({ error: 'Email and plan required' });
+        return res.status(400).json({ error: "Email and plan required" });
     }
 
     // Validate email format
-    if (!email.includes('@')) {
-        return res.status(400).json({ error: 'Invalid email format' });
+    if (!email.includes("@")) {
+        return res.status(400).json({ error: "Invalid email format" });
     }
 
     const orderNumber = generateOrderNumber();
     const licenseKey = generateLicenseKey();
     const encryptedKey = encryptKey(licenseKey);
-    const expiresAt = customExpiry ? new Date(customExpiry) : getExpiryDate(plan);
+    const expiresAt = customExpiry
+        ? new Date(customExpiry)
+        : getExpiryDate(plan);
 
     db.run(
         `INSERT INTO keys (key, encrypted_key, email, product, plan, price, expires_at, is_active, created_by) 
          VALUES (?, ?, ?, 'canvaspro', ?, ?, ?, 1, ?)`,
-        [licenseKey, encryptedKey, email, plan, price, expiresAt.toISOString(), adminUser],
-        function(err) {
+        [
+            licenseKey,
+            encryptedKey,
+            email,
+            plan,
+            price,
+            expiresAt.toISOString(),
+            adminUser,
+        ],
+        function (err) {
             if (err) {
-                console.error('Database error:', err);
-                return res.status(500).json({ error: 'Failed to generate key' });
+                console.error("Database error:", err);
+                return res
+                    .status(500)
+                    .json({ error: "Failed to generate key" });
             }
 
             const keyId = this.lastID;
@@ -1071,14 +1280,20 @@ app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
             db.run(
                 `INSERT INTO orders (order_number, email, product, plan, amount, key_id, status) 
                  VALUES (?, ?, 'canvaspro', ?, ?, ?, 'completed')`,
-                [orderNumber, email, plan, price, keyId]
+                [orderNumber, email, plan, price, keyId],
             );
 
             // Log admin action
             db.run(
                 `INSERT INTO admin_logs (admin_user, action, target_id, details, ip_address)
                  VALUES (?, ?, ?, ?, ?)`,
-                [adminUser, 'generate_key', keyId, JSON.stringify({ email, plan }), req.ip]
+                [
+                    adminUser,
+                    "generate_key",
+                    keyId,
+                    JSON.stringify({ email, plan }),
+                    req.ip,
+                ],
             );
 
             // Try to send email
@@ -1087,60 +1302,72 @@ app.post('/api/admin/generate-key', requireAdmin, async (req, res) => {
                 licenseKey,
                 email,
                 plan,
-                expiresAt
+                expiresAt,
             });
 
             res.json({
                 success: true,
                 key: licenseKey,
                 orderNumber,
-                expires: expiresAt.toISOString()
+                expires: expiresAt.toISOString(),
             });
-        }
+        },
     );
 });
 
 // Delete key endpoint
-app.delete('/api/admin/delete-key/:keyId', requireAdmin, (req, res) => {
+app.delete("/api/admin/delete-key/:keyId", requireAdmin, (req, res) => {
     const keyId = req.params.keyId;
     const adminUser = req.adminUser;
 
     db.run(
         `UPDATE keys SET is_active = 0 WHERE id = ?`,
         [keyId],
-        function(err) {
+        function (err) {
             if (err) {
-                console.error('❌ Delete key error:', err);
-                return res.status(500).json({ error: 'Failed to delete key' });
+                console.error("❌ Delete key error:", err);
+                return res.status(500).json({ error: "Failed to delete key" });
             }
 
             if (this.changes === 0) {
-                return res.status(404).json({ error: 'Key not found' });
+                return res.status(404).json({ error: "Key not found" });
             }
 
             // Deactivate all devices
-            db.run(`UPDATE key_devices SET is_active = 0 WHERE key_id = ?`, [keyId]);
+            db.run(`UPDATE key_devices SET is_active = 0 WHERE key_id = ?`, [
+                keyId,
+            ]);
 
             // Log admin action
             db.run(
                 `INSERT INTO admin_logs (admin_user, action, target_id, ip_address)
                  VALUES (?, ?, ?, ?)`,
-                [adminUser, 'delete_key', keyId, req.ip]
+                [adminUser, "delete_key", keyId, req.ip],
             );
 
             res.json({ success: true });
-        }
+        },
     );
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Secure CanvasPro Backend running on port ${PORT}`);
     console.log(`📍 Health: http://0.0.0.0:${PORT}/api/health`);
     console.log(`🔒 Security: All endpoints protected`);
-    console.log(`🔑 API Token: ${CONFIG.API_SECRET_TOKEN ? 'Configured' : 'NOT CONFIGURED'}`);
-    console.log(`👨‍💼 Admin: ${CONFIG.ADMIN_USERNAME ? 'Configured' : 'NOT CONFIGURED'}`);
-    console.log(`💳 Stripe: ${stripe ? 'Configured' : 'Test Mode'}`);
-    console.log(`📧 Email: ${resend ? 'Configured' : 'Disabled'}`);
-    console.log('\n⚠️ IMPORTANT: Set all environment variables in Replit Secrets!');
+    console.log(
+        `🔑 API Token: ${CONFIG.API_SECRET_TOKEN ? "Configured" : "NOT CONFIGURED"}`,
+    );
+    console.log(
+        `👨‍💼 Admin: ${CONFIG.ADMIN_USERNAME ? "Configured" : "NOT CONFIGURED"}`,
+    );
+    console.log(`💳 Stripe: ${stripe ? "Configured" : "Test Mode"}`);
+    console.log(`📧 Email: ${resend ? "Configured" : "Disabled"}`);
+
+    if (!CONFIG.STRIPE_SECRET_KEY) {
+        console.error(
+            "\n⚠️ WARNING: Stripe not configured! Payments will not work!",
+        );
+        console.error("Add STRIPE_SECRET_KEY to Replit Secrets immediately!");
+    }
 });
