@@ -656,14 +656,15 @@
 
         .crypto-address {
             background: var(--dark);
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
-            margin: 15px 0;
+            margin: 10px 0;
             font-family: monospace;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             word-break: break-all;
             cursor: pointer;
             transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .crypto-address:hover {
@@ -792,19 +793,57 @@
             </div>
 
             <div class="crypto-info" id="cryptoInfo">
-                <h4 style="color: var(--crypto-orange); margin-bottom: 15px;">📧 Send payment to:</h4>
+                <h4 style="color: var(--crypto-orange); margin-bottom: 15px;">📧 Send payment to any of these addresses:</h4>
+                
                 <div style="margin-bottom: 15px;">
-                    <div style="color: #888; font-size: 0.9rem; margin-bottom: 5px;">Bitcoin Address:</div>
-                    <div class="crypto-address" onclick="copyToClipboard('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh')">
-                        bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+                    <div style="color: #f7931a; font-size: 0.9rem; margin-bottom: 5px;">₿ Bitcoin (BTC):</div>
+                    <div class="crypto-address" onclick="copyToClipboard('bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8')">
+                        bc1qlv7rpmjt29p45zwlppnnk77sqx644e2ktemuy8
                     </div>
                 </div>
-                <div>
-                    <div style="color: #888; font-size: 0.9rem; margin-bottom: 5px;">Ethereum Address:</div>
-                    <div class="crypto-address" onclick="copyToClipboard('0x71C7656EC7ab88b098defB751B7401B5f6d8976F')">
-                        0x71C7656EC7ab88b098defB751B7401B5f6d8976F
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #627eea; font-size: 0.9rem; margin-bottom: 5px;">⟠ Ethereum (ETH):</div>
+                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
                     </div>
                 </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #14f195; font-size: 0.9rem; margin-bottom: 5px;">◎ Solana (SOL):</div>
+                    <div class="crypto-address" onclick="copyToClipboard('C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm')">
+                        C3LZe9ENmUX3AYPSbGK6feNLYqWt88TS82G56AEGELm
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #8247e5; font-size: 0.9rem; margin-bottom: 5px;">🟣 Polygon (MATIC):</div>
+                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #0052ff; font-size: 0.9rem; margin-bottom: 5px;">🔵 Base:</div>
+                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #4fc9da; font-size: 0.9rem; margin-bottom: 5px;">💧 Sui:</div>
+                    <div class="crypto-address" onclick="copyToClipboard('0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480')">
+                        0xc6e142ba4e76f3c538002dcea25dd3fcd6ce0ac767bc3f54789914e4d2953480
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <div style="color: #7b3fe4; font-size: 0.9rem; margin-bottom: 5px;">🟪 Monad:</div>
+                    <div class="crypto-address" onclick="copyToClipboard('0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA')">
+                        0xC57c3a50f106776Ef1FD30ffFF2ae02516453CDA
+                    </div>
+                </div>
+
                 <div class="crypto-warning">
                     ⚠️ After sending payment, email proof of transaction to support@learnlabs.shop with your order details
                 </div>
@@ -1032,11 +1071,14 @@
     <script src="https://js.stripe.com/v3/"></script>
     
     <script>
-        // Configuration
+        // Configuration - ONLY PUBLIC KEYS (No secrets in frontend!)
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51Q5Nc0RxWQL4Y9dFHlBVJzJWy9zBv3g1S7T1xQdYHgp5e6hJWj1EI6YsNZqr9xXIDJD5BSPDT9EJl3dWKwtJfrEa00BVfJzoQh';
         const BACKEND_URL = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
+        
+        // Debug mode - set to true to see console logs
+        const DEBUG_MODE = true;
 
-        // Initialize Stripe
+        // Initialize Stripe with publishable key (safe for frontend)
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 
         // Store current checkout info
@@ -1053,6 +1095,10 @@
             currentCheckoutData.price = price;
             currentCheckoutData.email = null;
             currentCheckoutData.paymentMethod = null;
+            
+            if (DEBUG_MODE) {
+                console.log('Opening email modal with plan:', plan, 'price:', price);
+            }
             
             const modal = document.getElementById('emailModal');
             const input = document.getElementById('modalEmailInput');
@@ -1109,6 +1155,10 @@
             // Store email
             currentCheckoutData.email = email;
 
+            if (DEBUG_MODE) {
+                console.log('Email validated, proceeding to payment method selection:', currentCheckoutData);
+            }
+
             // Close email modal
             document.getElementById('emailModal').classList.remove('show');
 
@@ -1121,15 +1171,24 @@
             const modal = document.getElementById('paymentMethodModal');
             const planDisplay = document.getElementById('selectedPlanDisplay');
             
+            if (DEBUG_MODE) {
+                console.log('Showing payment modal with data:', currentCheckoutData);
+            }
+            
             // Display selected plan
-            planDisplay.textContent = `${currentCheckoutData.plan.charAt(0).toUpperCase() + currentCheckoutData.plan.slice(1)} ($${currentCheckoutData.price})`;
+            planDisplay.textContent = `${currentCheckoutData.plan.charAt(0).toUpperCase() + currentCheckoutData.plan.slice(1)} (${currentCheckoutData.price})`;
             
             // Reset selection
             document.querySelectorAll('.payment-method-card').forEach(card => {
                 card.classList.remove('selected');
             });
             document.getElementById('cryptoInfo').classList.remove('show');
-            document.getElementById('paymentContinueBtn').disabled = true;
+            
+            // Reset and disable the continue button initially
+            const btn = document.getElementById('paymentContinueBtn');
+            btn.innerHTML = 'Select a Payment Method';
+            btn.disabled = true;
+            currentCheckoutData.paymentMethod = null;
             
             // Show modal
             modal.classList.add('show');
@@ -1137,6 +1196,10 @@
 
         // Select payment method
         function selectPaymentMethod(method) {
+            if (DEBUG_MODE) {
+                console.log('Payment method selected:', method);
+            }
+            
             currentCheckoutData.paymentMethod = method;
             
             // Update UI
@@ -1144,18 +1207,28 @@
                 card.classList.remove('selected');
             });
             
+            const btn = document.getElementById('paymentContinueBtn');
+            
             if (method === 'stripe') {
                 document.getElementById('stripeMethod').classList.add('selected');
                 document.getElementById('cryptoInfo').classList.remove('show');
-                document.getElementById('paymentContinueBtn').textContent = 'Continue to Secure Checkout';
+                btn.innerHTML = 'Continue to Secure Checkout';
             } else if (method === 'crypto') {
                 document.getElementById('cryptoMethod').classList.add('selected');
                 document.getElementById('cryptoInfo').classList.add('show');
-                document.getElementById('paymentContinueBtn').textContent = 'I\'ve Sent Payment';
+                btn.innerHTML = 'I\'ve Sent Payment';
             }
             
             // Enable continue button
-            document.getElementById('paymentContinueBtn').disabled = false;
+            btn.disabled = false;
+            
+            if (DEBUG_MODE) {
+                console.log('Button state after selection:', { 
+                    disabled: btn.disabled, 
+                    text: btn.innerHTML,
+                    checkoutData: currentCheckoutData 
+                });
+            }
         }
 
         // Proceed with payment
@@ -1165,7 +1238,13 @@
                 return;
             }
 
+            if (!currentCheckoutData.email || !currentCheckoutData.plan || !currentCheckoutData.price) {
+                alert('Missing checkout information. Please try again.');
+                return;
+            }
+
             const btn = document.getElementById('paymentContinueBtn');
+            const originalText = btn.innerHTML;
             
             if (currentCheckoutData.paymentMethod === 'stripe') {
                 // Proceed with Stripe checkout
@@ -1173,6 +1252,12 @@
                 btn.disabled = true;
 
                 try {
+                    console.log('Sending checkout request:', {
+                        email: currentCheckoutData.email,
+                        plan: currentCheckoutData.plan,
+                        price: currentCheckoutData.price
+                    });
+
                     const response = await fetch(`${BACKEND_URL}/api/create-checkout`, {
                         method: 'POST',
                         headers: { 
@@ -1186,7 +1271,12 @@
                         })
                     });
 
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const data = await response.json();
+                    console.log('Checkout response:', data);
 
                     if (data.url) {
                         // Redirect to Stripe checkout
@@ -1196,20 +1286,21 @@
                         alert(`Test Mode Order Complete!\n\nOrder #${data.orderNumber}\nLicense Key: ${data.license}\nPlan: ${data.plan}\n\nThe license key has been sent to ${currentCheckoutData.email}`);
                         closePaymentMethodModal();
                     } else {
-                        alert('Error creating checkout session. Please try again.');
-                        btn.innerHTML = 'Continue to Secure Checkout';
-                        btn.disabled = false;
+                        throw new Error('No checkout URL received');
                     }
                 } catch (error) {
                     console.error('Checkout error:', error);
-                    alert('Connection error. Please check your internet connection and try again.');
-                    btn.innerHTML = 'Continue to Secure Checkout';
+                    alert(`Error: ${error.message}\n\nPlease check:\n1. Backend is running at ${BACKEND_URL}\n2. Stripe is configured properly\n3. Your internet connection`);
+                    btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } else if (currentCheckoutData.paymentMethod === 'crypto') {
                 // Show crypto payment confirmation
-                alert(`Please send $${currentCheckoutData.price} in Bitcoin or Ethereum to the displayed address.\n\nAfter sending:\n1. Take a screenshot of the transaction\n2. Email it to support@learnlabs.shop\n3. Include your email: ${currentCheckoutData.email}\n4. Include your plan: ${currentCheckoutData.plan}\n\nYou'll receive your license key within 24 hours.`);
-                closePaymentMethodModal();
+                const cryptoMessage = `Please send ${currentCheckoutData.price} in your preferred cryptocurrency to one of the addresses shown.\n\nAfter sending:\n1. Take a screenshot of the transaction\n2. Email it to support@learnlabs.shop\n3. Include your email: ${currentCheckoutData.email}\n4. Include your plan: ${currentCheckoutData.plan}\n\nYou'll receive your license key within 24 hours.`;
+                
+                if (confirm(cryptoMessage)) {
+                    closePaymentMethodModal();
+                }
             }
         }
 
@@ -1347,6 +1438,27 @@
                 alert('Failed to copy. Please select and copy manually.');
             });
         }
+
+        // Check backend connectivity on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (DEBUG_MODE) {
+                console.log('Page loaded. Checking backend connectivity...');
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/health`);
+                    const data = await response.json();
+                    console.log('Backend health check:', data);
+                    if (data.status === 'ok') {
+                        console.log('✅ Backend is reachable');
+                    } else {
+                        console.warn('⚠️ Backend returned unexpected status:', data);
+                    }
+                } catch (error) {
+                    console.error('❌ Backend connectivity error:', error);
+                    console.error('Make sure your backend is running at:', BACKEND_URL);
+                    console.error('And CORS is properly configured to allow requests from:', window.location.origin);
+                }
+            }
+        });
 
         // Enter key support for lookup
         document.getElementById('lookupInput')?.addEventListener('keypress', function(e) {
