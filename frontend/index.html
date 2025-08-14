@@ -1,4 +1,16 @@
-<!DOCTYPE html>
+// Manual backend URL override (for debugging)
+        window.setBackendUrl = function(url) {
+            BACKEND_URL = url;
+            localStorage.setItem('cpAdminBackendUrl', url);
+            console.log('🔧 Backend URL manually set to:', url);
+            checkConnection();
+        };
+
+        // Show current backend URL in console
+        window.showBackendUrl = function() {
+            console.log('🔧 Current backend URL:', BACKEND_URL);
+            console.log('🔧 Fallback URLs:', FALLBACK_URLS);
+        };<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1050,34 +1062,54 @@
         // Configuration - FIXED STRIPE KEY AND DYNAMIC BACKEND URL
         const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RuHrAJZLe1MfeZPE08XLUCYXwMhfOuO9UxBpgOXNoUNoRSGAgI3zbETsSypezF7XQ7eoxUJ4ZslgIAYmrUMtEWi00Jvow5gVj';
         
-        // Dynamic backend URL detection (same logic as admin panel)
+        // Dynamic backend URL detection - FIXED for Replit
         function getBackendUrl() {
             try {
+                const hostname = window.location.hostname;
+                const origin = window.location.origin;
+                
+                console.log('🔧 URL Detection:', { hostname, origin });
+                
                 // Check if we're on localhost
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (hostname === 'localhost' || hostname === '127.0.0.1') {
                     return 'http://localhost:3000';
                 }
 
-                // Check if we're on Replit - use same domain
-                if (window.location.hostname.includes('replit.dev')) {
-                    return window.location.origin;
+                // Check if we're on Replit
+                if (hostname.includes('replit.dev')) {
+                    // For Replit, the backend usually runs on the same domain
+                    // Try the origin first, and if that fails, we'll try with port 3000
+                    return origin;
                 }
 
-                // Check if backend URL is stored
+                // Check if backend URL is manually stored (for custom domains)
                 const stored = localStorage.getItem('cpAdminBackendUrl');
-                if (stored && stored !== 'null' && stored !== '') {
+                if (stored && stored !== 'null' && stored !== '' && stored !== 'undefined') {
                     return stored;
                 }
 
                 // Default to current origin
-                return window.location.origin || 'http://localhost:3000';
+                return origin || 'http://localhost:3000';
             } catch (error) {
                 console.error('Error getting backend URL:', error);
                 return 'http://localhost:3000';
             }
         }
 
-        const BACKEND_URL = getBackendUrl() || 'http://localhost:3000';
+        let BACKEND_URL = getBackendUrl();
+
+        // Alternative URLs to try if main one fails
+        const FALLBACK_URLS = [];
+        
+        // Add fallback URLs for Replit
+        if (window.location.hostname.includes('replit.dev')) {
+            const baseUrl = window.location.origin;
+            FALLBACK_URLS.push(
+                baseUrl,
+                baseUrl.replace('https://', 'https://').replace('http://', 'http://'),
+                baseUrl + ':3000' // Try with port 3000
+            );
+        }
 
         // Store current checkout info
         let currentCheckoutPlan = null;
@@ -1088,63 +1120,73 @@
         // Connection checking
         let connectionCheckInterval;
 
-        // Check backend connection - FIXED AbortController issue
+        // Check backend connection - FIXED with fallback URLs
         async function checkConnection() {
             const status = document.getElementById('connectionStatus');
             
-            try {
-                status.style.display = 'block';
-                status.className = 'connection-status checking';
-                status.innerHTML = '🔄 Checking connection...';
+            status.style.display = 'block';
+            status.className = 'connection-status checking';
+            status.innerHTML = '🔄 Checking connection...';
 
-                console.log('🔗 Checking backend connection:', BACKEND_URL);
-
-                // Use a simple timeout promise instead of AbortController
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Connection timeout')), 8000)
-                );
-
-                const fetchPromise = fetch(`${BACKEND_URL}/api/health`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-                console.log('📡 Health check response:', response.status, response.ok);
-
-                if (response.ok) {
-                    const healthData = await response.json();
-                    console.log('💚 Backend health:', healthData);
+            // Try main URL first
+            const urlsToTry = [BACKEND_URL, ...FALLBACK_URLS];
+            
+            for (let i = 0; i < urlsToTry.length; i++) {
+                const testUrl = urlsToTry[i];
+                
+                try {
+                    console.log(`🔗 Trying backend URL ${i + 1}/${urlsToTry.length}:`, testUrl);
                     
-                    status.className = 'connection-status online';
-                    status.innerHTML = '✅ Backend Online';
-                    setTimeout(() => {
-                        status.style.display = 'none';
-                    }, 2000);
-                    return true;
-                } else {
-                    throw new Error(`Backend returned ${response.status}`);
+                    status.innerHTML = `🔄 Testing: ${testUrl.replace('https://', '').replace('http://', '').substring(0, 30)}...`;
+
+                    // Use a simple timeout promise
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Connection timeout')), 8000)
+                    );
+
+                    const fetchPromise = fetch(`${testUrl}/api/health`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const response = await Promise.race([fetchPromise, timeoutPromise]);
+
+                    console.log(`📡 Response from ${testUrl}:`, response.status, response.ok);
+
+                    if (response.ok) {
+                        const healthData = await response.json();
+                        console.log('💚 Backend health:', healthData);
+                        
+                        // Update BACKEND_URL to the working one
+                        BACKEND_URL = testUrl;
+                        
+                        status.className = 'connection-status online';
+                        status.innerHTML = `✅ Connected: ${testUrl.replace('https://', '').replace('http://', '')}`;
+                        
+                        setTimeout(() => {
+                            status.style.display = 'none';
+                        }, 3000);
+                        
+                        return true;
+                    } else {
+                        console.log(`❌ ${testUrl} returned ${response.status}`);
+                    }
+                } catch (error) {
+                    console.log(`❌ Failed to connect to ${testUrl}:`, error.message);
                 }
-            } catch (error) {
-                console.error('❌ Connection check failed:', error);
-                status.className = 'connection-status offline';
-                
-                if (error.message === 'Connection timeout') {
-                    status.innerHTML = '❌ Connection Timeout';
-                } else if (error.message.includes('fetch')) {
-                    status.innerHTML = '❌ Network Error';
-                } else {
-                    status.innerHTML = `❌ Backend Offline`;
-                }
-                
-                // Show URL for debugging
-                console.log('🔧 Backend URL being used:', BACKEND_URL);
-                
-                return false;
             }
+            
+            // All URLs failed
+            console.error('❌ All backend URLs failed');
+            status.className = 'connection-status offline';
+            status.innerHTML = '❌ Backend Offline - All URLs failed';
+            
+            // Show which URLs were tried
+            console.log('🔧 URLs tried:', urlsToTry);
+            
+            return false;
         }
 
         // Show email modal
