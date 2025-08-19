@@ -1,6 +1,3 @@
-// REPLACE the entire top section of your server.js with this
-// (from the beginning through the middleware setup):
-
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
@@ -50,7 +47,7 @@ const CONFIG = {
 const allowedOrigins = [
     "https://learnlabs.shop",
     "https://www.learnlabs.shop",
-    "https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev", // Add this!
+    "https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev",
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:5500",
@@ -61,6 +58,8 @@ const allowedOrigins = [
 // Handle OPTIONS requests manually BEFORE anything else
 app.options("*", (req, res) => {
     const origin = req.headers.origin;
+    console.log("OPTIONS request from origin:", origin);
+
     if (!origin || allowedOrigins.includes(origin)) {
         res.header("Access-Control-Allow-Origin", origin || "*");
         res.header(
@@ -77,15 +76,22 @@ app.options("*", (req, res) => {
     res.sendStatus(200);
 });
 
-// Then apply CORS for all other requests
-// Add this specific CORS handler for admin routes
-app.use("/api/admin/*", (req, res, next) => {
+// GENERAL CORS MIDDLEWARE FOR ALL ROUTES - THIS WAS MISSING!
+app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin);
+    console.log("Request from origin:", origin, "to path:", req.path);
+
+    if (!origin || allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin || "*");
         res.header("Access-Control-Allow-Credentials", "true");
-        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Token");
+        res.header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, DELETE, OPTIONS",
+        );
+        res.header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization, X-API-Token, stripe-signature",
+        );
     }
     next();
 });
@@ -108,6 +114,25 @@ function validateEnvironment() {
     if (missing.length > 0) {
         console.error("❌ CRITICAL: Missing required environment variables:");
         missing.forEach((key) => console.error(`   - ${key}`));
+        console.error("\n📝 Setup Instructions:");
+        console.error("1. In Replit, go to Secrets (🔒 icon)");
+        console.error("2. Add these secrets:");
+        console.error(
+            "   API_SECRET_TOKEN: " + crypto.randomBytes(32).toString("hex"),
+        );
+        console.error("   ADMIN_USERNAME: your_admin_username");
+        console.error(
+            "   ADMIN_PASSWORD_HASH: (use bcrypt to hash your password)",
+        );
+        console.error(
+            "   JWT_SECRET: " + crypto.randomBytes(64).toString("hex"),
+        );
+        console.error(
+            "   KEY_ENCRYPTION_KEY: " + crypto.randomBytes(32).toString("hex"),
+        );
+        console.error(
+            "   KEY_ENCRYPTION_IV: " + crypto.randomBytes(16).toString("hex"),
+        );
 
         if (CONFIG.NODE_ENV === "production") {
             process.exit(1);
@@ -129,8 +154,8 @@ app.use("/api/webhook", express.raw({ type: "application/json" }));
 // 2. JSON parsing
 app.use(express.json());
 
-// 3. Static files
-app.use(express.static(path.join(__dirname, "public")));
+// 3. Static files - ONLY ONE!
+app.use(express.static("./"));
 
 // 4. Helmet for security (AFTER CORS)
 app.use(
@@ -187,59 +212,6 @@ const strictLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 app.use("/api/validate-key", strictLimiter);
 app.use("/api/admin/login", strictLimiter);
-
-// ============================================
-// ENVIRONMENT VALIDATION
-// ============================================
-function validateEnvironment() {
-    const required = [
-        "API_SECRET_TOKEN",
-        "ADMIN_USERNAME",
-        "ADMIN_PASSWORD_HASH",
-        "JWT_SECRET",
-        "KEY_ENCRYPTION_KEY",
-        "KEY_ENCRYPTION_IV",
-    ];
-
-    const missing = required.filter((key) => !process.env[key]);
-
-    if (missing.length > 0) {
-        console.error("❌ CRITICAL: Missing required environment variables:");
-        missing.forEach((key) => console.error(`   - ${key}`));
-        console.error("\n📝 Setup Instructions:");
-        console.error("1. In Replit, go to Secrets (🔒 icon)");
-        console.error("2. Add these secrets:");
-        console.error(
-            "   API_SECRET_TOKEN: " + crypto.randomBytes(32).toString("hex"),
-        );
-        console.error("   ADMIN_USERNAME: your_admin_username");
-        console.error(
-            "   ADMIN_PASSWORD_HASH: (use bcrypt to hash your password)",
-        );
-        console.error(
-            "   JWT_SECRET: " + crypto.randomBytes(64).toString("hex"),
-        );
-        console.error(
-            "   KEY_ENCRYPTION_KEY: " + crypto.randomBytes(32).toString("hex"),
-        );
-        console.error(
-            "   KEY_ENCRYPTION_IV: " + crypto.randomBytes(16).toString("hex"),
-        );
-
-        if (CONFIG.NODE_ENV === "production") {
-            process.exit(1);
-        }
-    }
-
-    return missing.length === 0;
-}
-
-// Middleware order is important!
-app.use("/api/webhook", express.raw({ type: "application/json" }));
-
-// Then JSON and static files
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
 // ============================================
 // API AUTHENTICATION MIDDLEWARE
@@ -540,6 +512,11 @@ if (CONFIG.RESEND_API_KEY) {
         console.error("❌ Resend initialization failed:", error.message);
     }
 }
+
+// Keep-alive ping endpoint
+app.get("/api/ping", (req, res) => {
+    res.json({ status: "alive", timestamp: new Date().toISOString() });
+});
 
 // Email sending function - FIXED WITH YOUR EMAIL DOMAIN
 async function sendOrderEmail(order) {
@@ -1167,9 +1144,6 @@ app.post("/api/client/lookup", (req, res) => {
         return res.status(400).json({ error: "Invalid lookup format" });
     }
 });
-
-// FIND the admin login endpoint in your server.js (around line 1369)
-// DELETE the entire old version and REPLACE with this clean one:
 
 // Admin login endpoint
 app.post("/api/admin/login", strictLimiter, async (req, res) => {
