@@ -42,7 +42,7 @@ const CONFIG = {
 };
 
 // ============================================
-// CORS CONFIGURATION - MUST BE FIRST!
+// CORS CONFIGURATION - ULTRA PERMISSIVE FOR DEBUGGING
 // ============================================
 const allowedOrigins = [
     "https://learnlabs.shop",
@@ -55,24 +55,47 @@ const allowedOrigins = [
     "http://127.0.0.1:3000",
 ];
 
-// Handle OPTIONS requests manually BEFORE anything else
+// Use the cors package properly
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            console.log("Request from origin:", origin);
+            // Allow requests with no origin (like mobile apps or curl requests)
+            if (!origin) return callback(null, true);
+
+            if (allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                console.log("Origin not allowed:", origin);
+                callback(null, true); // TEMPORARILY allow all for debugging
+            }
+        },
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-API-Token",
+            "stripe-signature",
+        ],
+        maxAge: 86400,
+    }),
+);
+
+// Still handle OPTIONS manually as backup
 app.options("*", (req, res) => {
     const origin = req.headers.origin;
-    console.log("OPTIONS request from origin:", origin);
-
-    if (!origin || allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin || "*");
-        res.header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, PUT, DELETE, OPTIONS",
-        );
-        res.header(
-            "Access-Control-Allow-Headers",
-            "Content-Type, Authorization, X-API-Token, stripe-signature",
-        );
-        res.header("Access-Control-Allow-Credentials", "true");
-        res.header("Access-Control-Max-Age", "86400");
-    }
+    console.log("OPTIONS request from:", origin);
+    res.header("Access-Control-Allow-Origin", origin || "*");
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-API-Token, stripe-signature",
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
     res.sendStatus(200);
 });
 
@@ -154,8 +177,9 @@ app.use("/api/webhook", express.raw({ type: "application/json" }));
 // 2. JSON parsing
 app.use(express.json());
 
-// 3. Static files - ONLY ONE!
-app.use(express.static("./"));
+// 3. Static files - Serve from BOTH locations
+app.use(express.static("./")); // Root directory
+app.use(express.static("./public")); // Public directory
 
 // 4. Helmet for security (AFTER CORS)
 app.use(
@@ -600,6 +624,11 @@ async function sendOrderEmail(order) {
 // ============================================
 // API ENDPOINTS
 // ============================================
+
+// Explicit route for admin.html
+app.get("/admin.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "admin.html"));
+});
 
 // Root endpoint
 app.get("/", (req, res) => {
