@@ -200,13 +200,8 @@ const corsOptions = {
 // Middleware order is important!
 app.use("/api/webhook", express.raw({ type: "application/json" }));
 
-// Apply CORS
-app.use(cors(corsOptions));
-
-// Handle OPTIONS preflight requests
-app.options("*", cors(corsOptions));
-
-app.use("/api/admin/*", (req, res, next) => {
+// HANDLE OPTIONS FIRST - BEFORE ANYTHING ELSE
+app.options("*", (req, res) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header(
         "Access-Control-Allow-Methods",
@@ -214,14 +209,15 @@ app.use("/api/admin/*", (req, res, next) => {
     );
     res.header(
         "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-API-Token",
+        "Content-Type, Authorization, X-API-Token, stripe-signature",
     );
     res.header("Access-Control-Allow-Credentials", "true");
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(200);
-    }
-    next();
+    res.header("Access-Control-Max-Age", "86400");
+    return res.sendStatus(200);
 });
+
+// THEN Apply CORS
+app.use(cors(corsOptions));
 
 // Then JSON and static files
 app.use(express.json());
