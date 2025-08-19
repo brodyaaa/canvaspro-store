@@ -88,6 +88,15 @@ app.use(
     }),
 );
 
+app.use((req, res, next) => {
+    // Remove trailing slashes to prevent Replit redirects
+    if (req.path !== "/" && req.path.endsWith("/")) {
+        const newPath = req.path.slice(0, -1);
+        return res.redirect(301, newPath);
+    }
+    next();
+});
+
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes

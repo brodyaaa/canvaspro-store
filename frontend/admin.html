@@ -646,18 +646,21 @@
                 tokenExpiry: null,
             };
 
-            // FIXED getBackendUrl function - CRITICAL FIX
+            // FIXED getBackendUrl function - NO TRAILING SLASH
             function getBackendUrl() {
-                // YOUR REPLIT BACKEND URL
-                const REPLIT_BACKEND = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
-                
+                // YOUR REPLIT BACKEND URL - NO TRAILING SLASH
+                const REPLIT_BACKEND =
+                    "https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev";
+
                 // Check if we're on localhost for development
-                if (window.location.hostname === "localhost" || 
-                    window.location.hostname === "127.0.0.1") {
+                if (
+                    window.location.hostname === "localhost" ||
+                    window.location.hostname === "127.0.0.1"
+                ) {
                     // Try localhost first for development
                     return "http://localhost:3000";
                 }
-                
+
                 // For production (learnlabs.shop or www.learnlabs.shop), always use Replit
                 return REPLIT_BACKEND;
             }
@@ -676,7 +679,8 @@
 
                 // Check if already logged in
                 const storedToken = sessionStorage.getItem("cpAdminToken");
-                const storedExpiry = sessionStorage.getItem("cpAdminTokenExpiry");
+                const storedExpiry =
+                    sessionStorage.getItem("cpAdminTokenExpiry");
 
                 if (storedToken && storedExpiry) {
                     const expiryTime = new Date(storedExpiry);
@@ -789,7 +793,8 @@
 
                 // Show token info
                 if (config.tokenExpiry) {
-                    document.getElementById("tokenInfo").style.display = "block";
+                    document.getElementById("tokenInfo").style.display =
+                        "block";
                     document.getElementById("tokenExpiry").textContent =
                         config.tokenExpiry.toLocaleString();
                     document.getElementById("tokenDisplay").textContent =
