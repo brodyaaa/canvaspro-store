@@ -10,7 +10,7 @@ const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 
 const app = express();
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 console.log("🚀 Starting Secure CanvasPro Backend...");
@@ -60,35 +60,6 @@ const CONFIG = {
 };
 
 // ============================================
-// SECURITY MIDDLEWARE
-// ============================================
-
-// Use Helmet for security headers with adjusted CSP
-app.use(
-    helmet({
-        contentSecurityPolicy: {
-            directives: {
-                defaultSrc: ["'self'"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                scriptSrc: [
-                    "'self'",
-                    "'unsafe-inline'",
-                    "https://js.stripe.com",
-                ],
-                frameSrc: [
-                    "'self'",
-                    "https://js.stripe.com",
-                    "https://hooks.stripe.com",
-                ],
-                imgSrc: ["'self'", "data:", "https:", "https://i.imgur.com"],
-                connectSrc: ["'self'", "https://api.stripe.com"],
-            },
-        },
-        crossOriginEmbedderPolicy: false,
-    }),
-);
-
-// ============================================
 // SECURE CORS CONFIGURATION - FIXED ORDER
 // ============================================
 const corsOptions = {
@@ -135,13 +106,42 @@ const corsOptions = {
 app.options("*", cors(corsOptions)); // Handle preflight requests
 app.use(cors(corsOptions)); // Handle actual requests
 
+// ============================================
+// SECURITY MIDDLEWARE
+// ============================================
+
+// Use Helmet for security headers with adjusted CSP
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: [
+                    "'self'",
+                    "'unsafe-inline'",
+                    "https://js.stripe.com",
+                ],
+                frameSrc: [
+                    "'self'",
+                    "https://js.stripe.com",
+                    "https://hooks.stripe.com",
+                ],
+                imgSrc: ["'self'", "data:", "https:", "https://i.imgur.com"],
+                connectSrc: ["'self'", "https://api.stripe.com"],
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+    }),
+);
+
 // NOW handle trailing slashes - AFTER CORS
 app.use((req, res, next) => {
     // Skip redirect for OPTIONS requests (CORS preflight)
     if (req.method === "OPTIONS") {
         return next();
     }
-    
+
     // Remove trailing slashes to prevent Replit redirects
     if (req.path !== "/" && req.path.endsWith("/")) {
         const newPath = req.path.slice(0, -1);
@@ -152,15 +152,17 @@ app.use((req, res, next) => {
 
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: "Too many requests from this IP, please try again later.",
+    skip: (req) => req.method === "OPTIONS", // ADD THIS
 });
 
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10, // stricter limit for sensitive endpoints
+    max: 10,
     message: "Too many attempts, please try again later.",
+    skip: (req) => req.method === "OPTIONS", // ADD THIS
 });
 
 // Apply rate limiting
