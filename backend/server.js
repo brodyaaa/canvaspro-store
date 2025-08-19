@@ -201,16 +201,17 @@ app.use(
 );
 
 // 5. Remove trailing slashes (SKIP for OPTIONS)
-app.use((req, res, next) => {
-    if (req.method === "OPTIONS") {
-        return next();
-    }
-    if (req.path !== "/" && req.path.endsWith("/")) {
-        const newPath = req.path.slice(0, -1);
-        return res.redirect(301, newPath);
-    }
-    next();
-});
+// DELETE OR COMMENT THIS OUT:
+// app.use((req, res, next) => {
+//     if (req.method === "OPTIONS") {
+//         return next();
+//     }
+//     if (req.path !== "/" && req.path.endsWith("/")) {
+//         const newPath = req.path.slice(0, -1);
+//         return res.redirect(301, newPath);
+//     }
+//     next();
+// });
 
 // 6. Rate limiting (SKIP for OPTIONS)
 const apiLimiter = rateLimit({
