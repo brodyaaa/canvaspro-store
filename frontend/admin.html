@@ -477,16 +477,16 @@
 
             <!-- Tabs -->
             <div class="admin-tabs">
-                <button class="tab-btn active" onclick="showTab('keys')">
+                <button class="tab-btn active" onclick="showTab('keys', this)">
                     🔑 Keys
                 </button>
-                <button class="tab-btn" onclick="showTab('orders')">
+                <button class="tab-btn" onclick="showTab('orders', this)">
                     📦 Orders
                 </button>
-                <button class="tab-btn" onclick="showTab('generate')">
+                <button class="tab-btn" onclick="showTab('generate', this)">
                     ➕ Generate
                 </button>
-                <button class="tab-btn" onclick="showTab('settings')">
+                <button class="tab-btn" onclick="showTab('settings', this)">
                     ⚙️ Settings
                 </button>
             </div>
@@ -722,7 +722,7 @@
 
                 try {
                     const response = await fetch(
-                        `${config.backendUrl}/api/admin/login`, // REMOVED the trailing slash
+                        `${config.backendUrl}/api/admin/login`,
                         {
                             method: "POST",
                             headers: {
@@ -814,13 +814,17 @@
                 );
             }
 
-            // Tab Management
-            function showTab(tabName) {
+            // Tab Management - FIXED: Now accepts the button element
+            function showTab(tabName, buttonElement) {
                 // Update tab buttons
                 document
                     .querySelectorAll(".tab-btn")
                     .forEach((btn) => btn.classList.remove("active"));
-                event.target.classList.add("active");
+
+                // Add active class to clicked button
+                if (buttonElement) {
+                    buttonElement.classList.add("active");
+                }
 
                 // Update tab content
                 document
@@ -844,9 +848,11 @@
             // Data Loading Functions with JWT
             async function refreshData() {
                 if (!config.jwtToken || !config.backendUrl) {
+                    console.log("Not refreshing - no token or backend URL");
                     return;
                 }
 
+                console.log("Refreshing data...");
                 try {
                     const [stats, keys, orders] = await Promise.all([
                         fetchData("/api/admin/stats"),
@@ -877,6 +883,8 @@
                         if (tabId === "keysTab") loadKeys();
                         else if (tabId === "ordersTab") loadOrders();
                     }
+
+                    console.log("Data refreshed successfully");
                 } catch (error) {
                     console.error("Error refreshing data:", error);
                 }
@@ -888,6 +896,7 @@
                 }
 
                 try {
+                    console.log("Fetching:", config.backendUrl + endpoint);
                     const response = await fetch(config.backendUrl + endpoint, {
                         headers: {
                             Authorization: `Bearer ${config.jwtToken}`,

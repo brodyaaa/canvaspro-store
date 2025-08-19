@@ -126,7 +126,7 @@ app.use("/api/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 // 3. Static files
-app.use(express.static("./"));
+app.use(express.static(path.join(__dirname, "public")));
 
 // 4. Helmet for security (AFTER CORS)
 app.use(
