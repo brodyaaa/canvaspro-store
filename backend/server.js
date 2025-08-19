@@ -1214,7 +1214,6 @@ app.post("/api/client/lookup", (req, res) => {
 
 // Admin login endpoint
 app.post("/api/admin/login", strictLimiter, async (req, res) => {
-    app.post("/api/admin/login/", strictLimiter, adminLoginHandler);
     const { username, password } = req.body;
 
     if (!username || !password) {

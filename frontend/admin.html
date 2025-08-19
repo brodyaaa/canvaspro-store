@@ -722,7 +722,7 @@
 
                 try {
                     const response = await fetch(
-                        `${config.backendUrl}/api/admin/login`,
+                        `${config.backendUrl}/api/admin/login`, // REMOVED the trailing slash
                         {
                             method: "POST",
                             headers: {
