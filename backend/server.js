@@ -163,8 +163,8 @@ const corsOptions = {
 };
 
 // CRITICAL: Apply CORS BEFORE any other middleware that might redirect
-app.options("*", cors(corsOptions)); // Handle preflight requests
-app.use(cors(corsOptions)); // Handle actual requests
+// app.options("*", cors(corsOptions));
+// app.use(cors(corsOptions));
 
 // ============================================
 // SECURITY MIDDLEWARE
