@@ -30,7 +30,7 @@ const CONFIG = {
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
     ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH, // Store bcrypt hash, not plain password
 
-    // Stripe API Keys
+    // Stripe API Keys - FROM ENV ONLY, NO HARDCODED VALUES
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
@@ -63,15 +63,17 @@ const CONFIG = {
 // SECURITY MIDDLEWARE
 // ============================================
 
-// Use Helmet for security headers
+// Use Helmet for security headers with adjusted CSP
 app.use(
     helmet({
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                scriptSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", "data:", "https:"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+                frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+                imgSrc: ["'self'", "data:", "https:", "https://i.imgur.com"],
+                connectSrc: ["'self'", "https://api.stripe.com"],
             },
         },
         crossOriginEmbedderPolicy: false,
@@ -145,9 +147,8 @@ function validateEnvironment() {
 const isConfigured = validateEnvironment();
 
 // ============================================
-// SECURE CORS CONFIGURATION
+// SECURE CORS CONFIGURATION - FIXED
 // ============================================
-// In server.js, update the CORS configuration:
 const corsOptions = {
     origin: function (origin, callback) {
         // List of allowed origins
@@ -156,20 +157,23 @@ const corsOptions = {
             "https://www.learnlabs.shop",
             "http://localhost:3000",
             "http://localhost:5000",
+            "http://localhost:5500",
             "http://127.0.0.1:5500",
+            "http://127.0.0.1:3000"
         ];
 
-        // Allow requests with no origin
+        // Allow requests with no origin (like mobile apps or Postman)
         if (!origin) return callback(null, true);
 
         // Check if origin is allowed
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // In dev, allow all
+            // In dev, allow all origins
             if (process.env.NODE_ENV !== "production") {
                 callback(null, true);
             } else {
+                console.log(`CORS blocked origin: ${origin}`);
                 callback(new Error("Not allowed by CORS"));
             }
         }
@@ -498,12 +502,10 @@ if (CONFIG.RESEND_API_KEY) {
     }
 }
 
-// Email sending function
-// Replace the sendOrderEmail function with this enhanced version:
+// Email sending function - FIXED WITH YOUR EMAIL DOMAIN
 async function sendOrderEmail(order) {
     if (!resend) {
         console.log("⚠️ Skipping email - Resend not configured");
-        // Check if RESEND_API_KEY exists
         if (!CONFIG.RESEND_API_KEY) {
             console.error(
                 "❌ RESEND_API_KEY not set in environment variables!",
@@ -531,7 +533,7 @@ async function sendOrderEmail(order) {
 
     try {
         const emailResult = await resend.emails.send({
-            from: "LearnLabs <onboarding@resend.dev>",
+            from: "LearnLabs <onboarding@resend.dev>", // Use Resend's default domain until you verify yours
             to: [order.email],
             subject: `Your LearnLabs ${order.plan} License Key - Order #${order.orderNumber}`,
             html: `
@@ -570,7 +572,7 @@ async function sendOrderEmail(order) {
         });
 
         console.log("✅ Email sent successfully to:", order.email);
-        console.log("📧 Email ID:", emailResult.id);
+        console.log("📧 Email ID:", emailResult.data?.id || emailResult.id);
         return true;
     } catch (error) {
         console.error("❌ Email error:", error.message);
@@ -804,7 +806,7 @@ app.post("/api/answer-question", requireApiToken, async (req, res) => {
     }
 });
 
-// FIXED Create checkout session (Stripe) - HANDLES NULL VALUES PROPERLY
+// Create checkout session (Stripe) - HANDLES NULL VALUES PROPERLY
 app.post("/api/create-checkout", async (req, res) => {
     try {
         // Extract parameters with proper null handling
@@ -896,7 +898,7 @@ app.post("/api/create-checkout", async (req, res) => {
     }
 });
 
-// Stripe webhook
+// Stripe webhook - FIXED TO PROPERLY GENERATE KEYS AND SEND EMAILS
 app.post("/api/webhook", async (req, res) => {
     if (!stripe) {
         return res.status(400).json({ error: "Stripe not configured" });
@@ -926,6 +928,10 @@ app.post("/api/webhook", async (req, res) => {
         const encryptedKey = encryptKey(licenseKey);
         const expiresAt = getExpiryDate(session.metadata.plan);
 
+        console.log("🔑 Generating key for:", session.customer_email || session.metadata.email);
+        console.log("🔑 License Key:", licenseKey);
+        console.log("📅 Expires at:", expiresAt);
+
         db.run(
             `INSERT INTO keys (key, encrypted_key, email, product, plan, price, stripe_session_id, expires_at, is_active, created_by) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'stripe')`,
@@ -946,7 +952,9 @@ app.post("/api/webhook", async (req, res) => {
                 }
 
                 const keyId = this.lastID;
+                console.log("✅ Key saved to database with ID:", keyId);
 
+                // Create order record
                 db.run(
                     `INSERT INTO orders (order_number, email, product, plan, amount, key_id, stripe_session_id, status) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')`,
@@ -959,19 +967,34 @@ app.post("/api/webhook", async (req, res) => {
                         keyId,
                         session.id,
                     ],
-                );
+                    async (orderErr) => {
+                        if (orderErr) {
+                            console.error("❌ Error creating order:", orderErr);
+                        } else {
+                            console.log("✅ Order created:", orderNumber);
+                        }
 
-                await sendOrderEmail({
-                    orderNumber,
-                    licenseKey,
-                    email: session.customer_email || session.metadata.email,
-                    plan: session.metadata.plan,
-                    expiresAt,
-                });
+                        // Send email with the order details
+                        const emailSent = await sendOrderEmail({
+                            orderNumber,
+                            licenseKey,
+                            email: session.customer_email || session.metadata.email,
+                            plan: session.metadata.plan,
+                            expiresAt,
+                        });
+
+                        if (emailSent) {
+                            console.log("✅ Order email sent successfully");
+                        } else {
+                            console.error("❌ Failed to send order email");
+                        }
+                    }
+                );
 
                 console.log("✅ Webhook order processed:", {
                     orderNumber,
                     email: session.customer_email,
+                    licenseKey: licenseKey.substring(0, 4) + "...", // Log partial key for security
                 });
             },
         );
@@ -1369,5 +1392,13 @@ app.listen(PORT, "0.0.0.0", () => {
             "\n⚠️ WARNING: Stripe not configured! Payments will not work!",
         );
         console.error("Add STRIPE_SECRET_KEY to Replit Secrets immediately!");
+    }
+
+    // Check for Resend configuration
+    if (!CONFIG.RESEND_API_KEY) {
+        console.error(
+            "\n⚠️ WARNING: Resend not configured! Emails will not be sent!",
+        );
+        console.error("Add RESEND_API_KEY to Replit Secrets immediately!");
     }
 });

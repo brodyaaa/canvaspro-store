@@ -1,790 +1,940 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LearnLabs Admin Panel - Secure</title>
-    <link rel="icon" type="image/png" href="https://i.imgur.com/OozsIMD.png">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LearnLabs Admin Panel - Secure</title>
+        <link
+            rel="icon"
+            type="image/png"
+            href="https://i.imgur.com/OozsIMD.png"
+        />
 
-        :root {
-            --primary: #ff6633;
-            --primary-dark: #ff4411;
-            --dark: #1a1a1a;
-            --darker: #0f0f0f;
-            --purple: #6b46c1;
-            --blue: #3b82f6;
-            --green: #10b981;
-            --red: #ef4444;
-        }
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--darker);
-            color: white;
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(107, 70, 193, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
-        }
+            :root {
+                --primary: #ff6633;
+                --primary-dark: #ff4411;
+                --dark: #1a1a1a;
+                --darker: #0f0f0f;
+                --purple: #6b46c1;
+                --blue: #3b82f6;
+                --green: #10b981;
+                --red: #ef4444;
+            }
 
-        /* Login Screen */
-        .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: var(--darker);
+                color: white;
+                min-height: 100vh;
+                background-image:
+                    radial-gradient(
+                        circle at 20% 50%,
+                        rgba(107, 70, 193, 0.1) 0%,
+                        transparent 50%
+                    ),
+                    radial-gradient(
+                        circle at 80% 80%,
+                        rgba(59, 130, 246, 0.05) 0%,
+                        transparent 50%
+                    );
+            }
 
-        .login-box {
-            background: var(--dark);
-            border: 2px solid #2a2a2a;
-            border-radius: 16px;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
+            /* Login Screen */
+            .login-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                padding: 20px;
+            }
 
-        .login-logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            border-radius: 12px;
-        }
+            .login-box {
+                background: var(--dark);
+                border: 2px solid #2a2a2a;
+                border-radius: 16px;
+                padding: 40px;
+                width: 100%;
+                max-width: 400px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
 
-        .login-title {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+            .login-logo {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 20px;
+                border-radius: 12px;
+            }
 
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
+            .login-title {
+                font-size: 1.5rem;
+                margin-bottom: 30px;
+                background: linear-gradient(
+                    135deg,
+                    var(--primary) 0%,
+                    var(--purple) 100%
+                );
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #888;
-            font-weight: 500;
-        }
+            .form-group {
+                margin-bottom: 20px;
+                text-align: left;
+            }
 
-        .form-group input, .form-select {
-            width: 100%;
-            padding: 12px 16px;
-            background: var(--darker);
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-        }
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                color: #888;
+                font-weight: 500;
+            }
 
-        .form-group input:focus, .form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+            .form-group input,
+            .form-select {
+                width: 100%;
+                padding: 12px 16px;
+                background: var(--darker);
+                border: 1px solid #2a2a2a;
+                border-radius: 8px;
+                color: white;
+                font-size: 14px;
+            }
 
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+            .form-group input:focus,
+            .form-select:focus {
+                outline: none;
+                border-color: var(--primary);
+            }
 
-        .login-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(255, 102, 51, 0.4);
-        }
+            .login-btn {
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(
+                    135deg,
+                    var(--primary) 0%,
+                    var(--primary-dark) 100%
+                );
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
 
-        .login-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+            .login-btn:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 30px rgba(255, 102, 51, 0.4);
+            }
 
-        /* Main Admin Panel */
-        .admin-container {
-            display: none;
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+            .login-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
 
-        .admin-header {
-            background: var(--dark);
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+            /* Main Admin Panel */
+            .admin-container {
+                display: none;
+                padding: 20px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
 
-        .admin-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .admin-logo {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-        }
-
-        .admin-stats {
-            display: flex;
-            gap: 20px;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: #888;
-        }
-
-        .logout-btn {
-            background: var(--red);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        /* Tabs */
-        .admin-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            background: var(--darker);
-            color: #888;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .tab-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .tab-content {
-            display: none;
-            background: var(--dark);
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Tables */
-        .table-container {
-            overflow-x: auto;
-            margin-top: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #2a2a2a;
-        }
-
-        th {
-            background: var(--darker);
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        .status-active {
-            color: var(--green);
-        }
-
-        .status-expired {
-            color: var(--red);
-        }
-
-        /* Action Buttons */
-        .btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-right: 5px;
-            transition: all 0.3s;
-        }
-
-        .btn-primary { background: var(--blue); color: white; }
-        .btn-success { background: var(--green); color: white; }
-        .btn-danger { background: var(--red); color: white; }
-
-        .btn:hover {
-            transform: translateY(-1px);
-        }
-
-        /* Forms */
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        /* Key Display */
-        .key-display {
-            font-family: 'Courier New', monospace;
-            background: var(--darker);
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #2a2a2a;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .key-display:hover {
-            background: #2a2a2a;
-        }
-
-        /* Notifications */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            color: white;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-        }
-
-        .notification.success { background: var(--green); }
-        .notification.error { background: var(--red); }
-        .notification.warning { background: #f59e0b; }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .security-notice {
-            background: rgba(255, 102, 51, 0.1);
-            border: 1px solid var(--primary);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #ffa366;
-        }
-
-        .token-display {
-            background: var(--darker);
-            padding: 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 11px;
-            word-break: break-all;
-            margin-top: 8px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
             .admin-header {
-                flex-direction: column;
-                gap: 15px;
+                background: var(--dark);
+                border: 1px solid #2a2a2a;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .admin-title {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 1.5rem;
+                font-weight: 600;
+            }
+
+            .admin-logo {
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
             }
 
             .admin-stats {
+                display: flex;
+                gap: 20px;
+            }
+
+            .stat-item {
+                text-align: center;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: var(--primary);
+            }
+
+            .stat-label {
+                font-size: 0.8rem;
+                color: #888;
+            }
+
+            .logout-btn {
+                background: var(--red);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+            }
+
+            /* Tabs */
+            .admin-tabs {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .tab-btn {
+                padding: 10px 20px;
+                background: var(--darker);
+                color: #888;
+                border: 1px solid #2a2a2a;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .tab-btn.active {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+
+            .tab-content {
+                display: none;
+                background: var(--dark);
+                border: 1px solid #2a2a2a;
+                border-radius: 12px;
+                padding: 20px;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            /* Tables */
+            .table-container {
+                overflow-x: auto;
+                margin-top: 20px;
+            }
+
+            table {
                 width: 100%;
-                justify-content: space-around;
+                border-collapse: collapse;
             }
 
+            th,
+            td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #2a2a2a;
+            }
+
+            th {
+                background: var(--darker);
+                color: var(--primary);
+                font-weight: 600;
+            }
+
+            .status-active {
+                color: var(--green);
+            }
+
+            .status-expired {
+                color: var(--red);
+            }
+
+            /* Action Buttons */
+            .btn {
+                padding: 6px 12px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                margin-right: 5px;
+                transition: all 0.3s;
+            }
+
+            .btn-primary {
+                background: var(--blue);
+                color: white;
+            }
+            .btn-success {
+                background: var(--green);
+                color: white;
+            }
+            .btn-danger {
+                background: var(--red);
+                color: white;
+            }
+
+            .btn:hover {
+                transform: translateY(-1px);
+            }
+
+            /* Forms */
             .form-row {
-                grid-template-columns: 1fr;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
             }
-        }
-    </style>
-</head>
-<body>
-    <!-- Login Screen -->
-    <div class="login-container" id="loginScreen">
-        <div class="login-box">
-            <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="login-logo">
-            <h1 class="login-title">LearnLabs Admin - Secure</h1>
-            
-            <div class="security-notice">
-                🔒 This panel now uses JWT authentication for enhanced security
-            </div>
-            
-            <form id="loginForm">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="username" required autocomplete="username">
+
+            /* Key Display */
+            .key-display {
+                font-family: "Courier New", monospace;
+                background: var(--darker);
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: 1px solid #2a2a2a;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .key-display:hover {
+                background: #2a2a2a;
+            }
+
+            /* Notifications */
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            }
+
+            .notification.success {
+                background: var(--green);
+            }
+            .notification.error {
+                background: var(--red);
+            }
+            .notification.warning {
+                background: #f59e0b;
+            }
+
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            .security-notice {
+                background: rgba(255, 102, 51, 0.1);
+                border: 1px solid var(--primary);
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 20px;
+                font-size: 13px;
+                color: #ffa366;
+            }
+
+            .token-display {
+                background: var(--darker);
+                padding: 8px;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 11px;
+                word-break: break-all;
+                margin-top: 8px;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .admin-header {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+
+                .admin-stats {
+                    width: 100%;
+                    justify-content: space-around;
+                }
+
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Login Screen -->
+        <div class="login-container" id="loginScreen">
+            <div class="login-box">
+                <img
+                    src="https://i.imgur.com/OozsIMD.png"
+                    alt="CanvasPro"
+                    class="login-logo"
+                />
+                <h1 class="login-title">LearnLabs Admin - Secure</h1>
+
+                <div class="security-notice">
+                    🔒 This panel now uses JWT authentication for enhanced
+                    security
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="login-btn" id="loginBtn">Login</button>
-            </form>
-        </div>
-    </div>
 
-    <!-- Admin Panel -->
-    <div class="admin-container" id="adminPanel">
-        <!-- Header -->
-        <div class="admin-header">
-            <div class="admin-title">
-                <img src="https://i.imgur.com/OozsIMD.png" alt="CanvasPro" class="admin-logo">
-                LearnLabs Admin Panel
-            </div>
-            <div class="admin-stats">
-                <div class="stat-item">
-                    <div class="stat-value" id="totalKeys">0</div>
-                    <div class="stat-label">Total Keys</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="activeKeys">0</div>
-                    <div class="stat-label">Active</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="todayRevenue">$0</div>
-                    <div class="stat-label">Today Revenue</div>
-                </div>
-            </div>
-            <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
-
-        <!-- Security Notice -->
-        <div class="security-notice" id="tokenInfo" style="display: none;">
-            <strong>🔐 JWT Token Active</strong>
-            <div>Expires: <span id="tokenExpiry"></span></div>
-            <div class="token-display" id="tokenDisplay"></div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="admin-tabs">
-            <button class="tab-btn active" onclick="showTab('keys')">🔑 Keys</button>
-            <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
-            <button class="tab-btn" onclick="showTab('generate')">➕ Generate</button>
-            <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
-        </div>
-
-        <!-- Keys Tab -->
-        <div class="tab-content active" id="keysTab">
-            <div class="table-container">
-                <table id="keysTable">
-                    <thead>
-                        <tr>
-                            <th>Key</th>
-                            <th>Email</th>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Devices</th>
-                            <th>Expires</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keysTableBody">
-                        <!-- Keys will be loaded here -->
-                    </tbody>
-                </table>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            required
+                            autocomplete="username"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            required
+                            autocomplete="current-password"
+                        />
+                    </div>
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        Login
+                    </button>
+                </form>
             </div>
         </div>
 
-        <!-- Orders Tab -->
-        <div class="tab-content" id="ordersTab">
-            <div class="table-container">
-                <table id="ordersTable">
-                    <thead>
-                        <tr>
-                            <th>Order #</th>
-                            <th>Email</th>
-                            <th>Plan</th>
-                            <th>Amount</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody">
-                        <!-- Orders will be loaded here -->
-                    </tbody>
-                </table>
+        <!-- Admin Panel -->
+        <div class="admin-container" id="adminPanel">
+            <!-- Header -->
+            <div class="admin-header">
+                <div class="admin-title">
+                    <img
+                        src="https://i.imgur.com/OozsIMD.png"
+                        alt="CanvasPro"
+                        class="admin-logo"
+                    />
+                    LearnLabs Admin Panel
+                </div>
+                <div class="admin-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalKeys">0</div>
+                        <div class="stat-label">Total Keys</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="activeKeys">0</div>
+                        <div class="stat-label">Active</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="todayRevenue">$0</div>
+                        <div class="stat-label">Today Revenue</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
-        </div>
 
-        <!-- Generate Tab -->
-        <div class="tab-content" id="generateTab">
-            <h3 style="margin-bottom: 20px;">Generate New Key</h3>
-            
-            <form id="generateForm">
+            <!-- Security Notice -->
+            <div class="security-notice" id="tokenInfo" style="display: none">
+                <strong>🔐 JWT Token Active</strong>
+                <div>Expires: <span id="tokenExpiry"></span></div>
+                <div class="token-display" id="tokenDisplay"></div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showTab('keys')">
+                    🔑 Keys
+                </button>
+                <button class="tab-btn" onclick="showTab('orders')">
+                    📦 Orders
+                </button>
+                <button class="tab-btn" onclick="showTab('generate')">
+                    ➕ Generate
+                </button>
+                <button class="tab-btn" onclick="showTab('settings')">
+                    ⚙️ Settings
+                </button>
+            </div>
+
+            <!-- Keys Tab -->
+            <div class="tab-content active" id="keysTab">
+                <div class="table-container">
+                    <table id="keysTable">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Email</th>
+                                <th>Plan</th>
+                                <th>Status</th>
+                                <th>Devices</th>
+                                <th>Expires</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keysTableBody">
+                            <!-- Keys will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div class="tab-content" id="ordersTab">
+                <div class="table-container">
+                    <table id="ordersTable">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Email</th>
+                                <th>Plan</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Generate Tab -->
+            <div class="tab-content" id="generateTab">
+                <h3 style="margin-bottom: 20px">Generate New Key</h3>
+
+                <form id="generateForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="genEmail" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Plan</label>
+                            <select id="genPlan" class="form-select" required>
+                                <option value="test">Test (1 hour)</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                                <option value="lifetime">Lifetime</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Price</label>
+                            <input
+                                type="number"
+                                id="genPrice"
+                                step="0.01"
+                                value="0.00"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Custom Expiry (Optional)</label>
+                            <input type="datetime-local" id="genExpiry" />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                        style="padding: 12px 24px"
+                    >
+                        Generate Key
+                    </button>
+                </form>
+
+                <div
+                    id="generatedKey"
+                    style="
+                        display: none;
+                        margin-top: 20px;
+                        padding: 20px;
+                        background: var(--darker);
+                        border-radius: 8px;
+                    "
+                >
+                    <h4>Generated Key:</h4>
+                    <div
+                        class="key-display"
+                        id="newKeyDisplay"
+                        onclick="copyKey(this.textContent)"
+                    >
+                        <!-- Generated key will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settingsTab">
+                <h3 style="margin-bottom: 20px">System Settings</h3>
+
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="genEmail" required>
+                        <label>Backend URL</label>
+                        <input type="url" id="backendUrl" value="" />
                     </div>
                     <div class="form-group">
-                        <label>Plan</label>
-                        <select id="genPlan" class="form-select" required>
-                            <option value="test">Test (1 hour)</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="yearly">Yearly</option>
-                            <option value="lifetime">Lifetime</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Price</label>
-                        <input type="number" id="genPrice" step="0.01" value="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label>Custom Expiry (Optional)</label>
-                        <input type="datetime-local" id="genExpiry">
+                        <label>Auto-refresh interval (seconds)</label>
+                        <input
+                            type="number"
+                            id="refreshInterval"
+                            value="30"
+                            min="10"
+                        />
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-success" style="padding: 12px 24px;">Generate Key</button>
-            </form>
-
-            <div id="generatedKey" style="display: none; margin-top: 20px; padding: 20px; background: var(--darker); border-radius: 8px;">
-                <h4>Generated Key:</h4>
-                <div class="key-display" id="newKeyDisplay" onclick="copyKey(this.textContent)">
-                    <!-- Generated key will appear here -->
-                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">
+                    Save Settings
+                </button>
+                <button class="btn btn-success" onclick="refreshData()">
+                    Refresh All Data
+                </button>
             </div>
         </div>
 
-        <!-- Settings Tab -->
-        <div class="tab-content" id="settingsTab">
-            <h3 style="margin-bottom: 20px;">System Settings</h3>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Backend URL</label>
-                    <input type="url" id="backendUrl" value="">
-                </div>
-                <div class="form-group">
-                    <label>Auto-refresh interval (seconds)</label>
-                    <input type="number" id="refreshInterval" value="30" min="10">
-                </div>
-            </div>
+        <script>
+            // ============================================
+            // SECURE ADMIN PANEL SCRIPT
+            // ============================================
 
-            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-            <button class="btn btn-success" onclick="refreshData()">Refresh All Data</button>
-        </div>
-    </div>
+            // Configuration - NO HARDCODED URLS OR CREDENTIALS!
+            let config = {
+                backendUrl: "",
+                refreshInterval: 30000,
+                isLoggedIn: false,
+                jwtToken: null,
+                tokenExpiry: null,
+            };
 
-    <script>
-        // ============================================
-        // SECURE ADMIN PANEL SCRIPT
-        // ============================================
-        
-        // Configuration - NO HARDCODED URLS OR CREDENTIALS!
-        let config = {
-            backendUrl: '', 
-            refreshInterval: 30000,
-            isLoggedIn: false,
-            jwtToken: null,
-            tokenExpiry: null
-        };
-
-        // Determine backend URL based on environment
-        function getBackendUrl() {
-            // Check if we're on localhost
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                return 'http://localhost:3000';
-            }
-            
-            // Check if backend URL is stored
-            const stored = localStorage.getItem('cpAdminBackendUrl');
-            if (stored) {
-                return stored;
-            }
-            
-            // Prompt for backend URL if not set
-            const url = prompt('Enter your backend URL (e.g., https://your-app.replit.dev):');
-            if (url) {
-                localStorage.setItem('cpAdminBackendUrl', url);
-                return url;
-            }
-            
-            return '';
-        }
-
-        // Data storage
-        let keysData = [];
-        let ordersData = [];
-        let refreshInterval = null;
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set backend URL
-            config.backendUrl = getBackendUrl();
-            document.getElementById('backendUrl').value = config.backendUrl;
-            
-            // Check if already logged in
-            const storedToken = sessionStorage.getItem('cpAdminToken');
-            const storedExpiry = sessionStorage.getItem('cpAdminTokenExpiry');
-            
-            if (storedToken && storedExpiry) {
-                const expiryTime = new Date(storedExpiry);
-                if (expiryTime > new Date()) {
-                    config.jwtToken = storedToken;
-                    config.tokenExpiry = expiryTime;
-                    showAdminPanel();
-                } else {
-                    // Token expired
-                    sessionStorage.removeItem('cpAdminToken');
-                    sessionStorage.removeItem('cpAdminTokenExpiry');
-                }
-            }
-
-            // Setup forms
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
-            document.getElementById('generateForm').addEventListener('submit', handleGenerate);
-
-            // Load settings
-            loadSettings();
-        });
-
-        // Authentication with JWT
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const loginBtn = document.getElementById('loginBtn');
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Logging in...';
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch(`${config.backendUrl}/api/admin/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
+            // FIXED getBackendUrl function - CRITICAL FIX
+            function getBackendUrl() {
+                // YOUR REPLIT BACKEND URL
+                const REPLIT_BACKEND = 'https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev';
                 
-                const data = await response.json();
+                // Check if we're on localhost for development
+                if (window.location.hostname === "localhost" || 
+                    window.location.hostname === "127.0.0.1") {
+                    // Try localhost first for development
+                    return "http://localhost:3000";
+                }
                 
-                if (response.ok && data.success) {
-                    // Store JWT token
-                    config.jwtToken = data.token;
-                    config.tokenExpiry = new Date(Date.now() + (4 * 60 * 60 * 1000)); // 4 hours
-                    
-                    sessionStorage.setItem('cpAdminToken', data.token);
-                    sessionStorage.setItem('cpAdminTokenExpiry', config.tokenExpiry.toISOString());
-                    
-                    // Clear password from memory
-                    document.getElementById('password').value = '';
-                    
-                    showAdminPanel();
-                    showNotification('Login successful!', 'success');
-                } else {
-                    showNotification(data.error || 'Invalid credentials!', 'error');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showNotification('Connection error. Check backend URL.', 'error');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Login';
-            }
-        }
-
-        function logout() {
-            sessionStorage.removeItem('cpAdminToken');
-            sessionStorage.removeItem('cpAdminTokenExpiry');
-            config.jwtToken = null;
-            config.tokenExpiry = null;
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('adminPanel').style.display = 'none';
-            config.isLoggedIn = false;
-            
-            // Clear refresh interval
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-                refreshInterval = null;
-            }
-        }
-
-        function showAdminPanel() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'block';
-            config.isLoggedIn = true;
-            
-            // Show token info
-            if (config.tokenExpiry) {
-                document.getElementById('tokenInfo').style.display = 'block';
-                document.getElementById('tokenExpiry').textContent = config.tokenExpiry.toLocaleString();
-                document.getElementById('tokenDisplay').textContent = config.jwtToken.substring(0, 50) + '...';
-            }
-            
-            // Load initial data
-            refreshData();
-            
-            // Setup auto-refresh with proper cleanup
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-            refreshInterval = setInterval(refreshData, config.refreshInterval);
-        }
-
-        // Tab Management
-        function showTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(tabName + 'Tab').classList.add('active');
-
-            // Load tab-specific data
-            switch(tabName) {
-                case 'keys':
-                    loadKeys();
-                    break;
-                case 'orders':
-                    loadOrders();
-                    break;
-            }
-        }
-
-        // Data Loading Functions with JWT
-        async function refreshData() {
-            if (!config.jwtToken || !config.backendUrl) {
-                return;
+                // For production (learnlabs.shop or www.learnlabs.shop), always use Replit
+                return REPLIT_BACKEND;
             }
 
-            try {
-                const [stats, keys, orders] = await Promise.all([
-                    fetchData('/api/admin/stats'),
-                    fetchData('/api/admin/keys'),
-                    fetchData('/api/admin/orders')
-                ]);
+            // Data storage
+            let keysData = [];
+            let ordersData = [];
+            let refreshInterval = null;
 
-                // Update stats
-                if (stats) {
-                    document.getElementById('totalKeys').textContent = stats.totalKeys || 0;
-                    document.getElementById('activeKeys').textContent = stats.activeKeys || 0;
-                    document.getElementById('todayRevenue').textContent = '$' + (stats.todayRevenue || 0).toFixed(2);
-                }
+            // Initialize
+            document.addEventListener("DOMContentLoaded", function () {
+                // Set backend URL
+                config.backendUrl = getBackendUrl();
+                document.getElementById("backendUrl").value = config.backendUrl;
+                console.log("Backend URL set to:", config.backendUrl);
 
-                // Store data
-                keysData = keys || [];
-                ordersData = orders || [];
+                // Check if already logged in
+                const storedToken = sessionStorage.getItem("cpAdminToken");
+                const storedExpiry = sessionStorage.getItem("cpAdminTokenExpiry");
 
-                // Update current tab
-                const activeTab = document.querySelector('.tab-content.active');
-                if (activeTab) {
-                    const tabId = activeTab.id;
-                    if (tabId === 'keysTab') loadKeys();
-                    else if (tabId === 'ordersTab') loadOrders();
-                }
-
-            } catch (error) {
-                console.error('Error refreshing data:', error);
-            }
-        }
-
-        async function fetchData(endpoint) {
-            if (!config.jwtToken || !config.backendUrl) {
-                throw new Error('Not configured');
-            }
-
-            try {
-                const response = await fetch(config.backendUrl + endpoint, {
-                    headers: {
-                        'Authorization': `Bearer ${config.jwtToken}`,
-                        'Content-Type': 'application/json'
+                if (storedToken && storedExpiry) {
+                    const expiryTime = new Date(storedExpiry);
+                    if (expiryTime > new Date()) {
+                        config.jwtToken = storedToken;
+                        config.tokenExpiry = expiryTime;
+                        showAdminPanel();
+                    } else {
+                        // Token expired
+                        sessionStorage.removeItem("cpAdminToken");
+                        sessionStorage.removeItem("cpAdminTokenExpiry");
                     }
-                });
-                
-                if (response.status === 401) {
-                    showNotification('Session expired, please login again', 'error');
-                    logout();
+                }
+
+                // Setup forms
+                document
+                    .getElementById("loginForm")
+                    .addEventListener("submit", handleLogin);
+                document
+                    .getElementById("generateForm")
+                    .addEventListener("submit", handleGenerate);
+
+                // Load settings
+                loadSettings();
+            });
+
+            // Authentication with JWT
+            async function handleLogin(e) {
+                e.preventDefault();
+
+                const loginBtn = document.getElementById("loginBtn");
+                loginBtn.disabled = true;
+                loginBtn.textContent = "Logging in...";
+
+                const username = document.getElementById("username").value;
+                const password = document.getElementById("password").value;
+
+                console.log("Attempting login to:", config.backendUrl);
+
+                try {
+                    const response = await fetch(
+                        `${config.backendUrl}/api/admin/login`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ username, password }),
+                        },
+                    );
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        // Store JWT token
+                        config.jwtToken = data.token;
+                        config.tokenExpiry = new Date(
+                            Date.now() + 4 * 60 * 60 * 1000,
+                        ); // 4 hours
+
+                        sessionStorage.setItem("cpAdminToken", data.token);
+                        sessionStorage.setItem(
+                            "cpAdminTokenExpiry",
+                            config.tokenExpiry.toISOString(),
+                        );
+
+                        // Clear password from memory
+                        document.getElementById("password").value = "";
+
+                        showAdminPanel();
+                        showNotification("Login successful!", "success");
+                    } else {
+                        showNotification(
+                            data.error || "Invalid credentials!",
+                            "error",
+                        );
+                    }
+                } catch (error) {
+                    console.error("Login error:", error);
+                    showNotification(
+                        "Connection error. Check backend URL or server may be sleeping.",
+                        "error",
+                    );
+                } finally {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = "Login";
+                }
+            }
+
+            function logout() {
+                sessionStorage.removeItem("cpAdminToken");
+                sessionStorage.removeItem("cpAdminTokenExpiry");
+                config.jwtToken = null;
+                config.tokenExpiry = null;
+                document.getElementById("loginScreen").style.display = "flex";
+                document.getElementById("adminPanel").style.display = "none";
+                config.isLoggedIn = false;
+
+                // Clear refresh interval
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+
+            function showAdminPanel() {
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("adminPanel").style.display = "block";
+                config.isLoggedIn = true;
+
+                // Show token info
+                if (config.tokenExpiry) {
+                    document.getElementById("tokenInfo").style.display = "block";
+                    document.getElementById("tokenExpiry").textContent =
+                        config.tokenExpiry.toLocaleString();
+                    document.getElementById("tokenDisplay").textContent =
+                        config.jwtToken.substring(0, 50) + "...";
+                }
+
+                // Load initial data
+                refreshData();
+
+                // Setup auto-refresh with proper cleanup
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+                refreshInterval = setInterval(
+                    refreshData,
+                    config.refreshInterval,
+                );
+            }
+
+            // Tab Management
+            function showTab(tabName) {
+                // Update tab buttons
+                document
+                    .querySelectorAll(".tab-btn")
+                    .forEach((btn) => btn.classList.remove("active"));
+                event.target.classList.add("active");
+
+                // Update tab content
+                document
+                    .querySelectorAll(".tab-content")
+                    .forEach((content) => content.classList.remove("active"));
+                document
+                    .getElementById(tabName + "Tab")
+                    .classList.add("active");
+
+                // Load tab-specific data
+                switch (tabName) {
+                    case "keys":
+                        loadKeys();
+                        break;
+                    case "orders":
+                        loadOrders();
+                        break;
+                }
+            }
+
+            // Data Loading Functions with JWT
+            async function refreshData() {
+                if (!config.jwtToken || !config.backendUrl) {
+                    return;
+                }
+
+                try {
+                    const [stats, keys, orders] = await Promise.all([
+                        fetchData("/api/admin/stats"),
+                        fetchData("/api/admin/keys"),
+                        fetchData("/api/admin/orders"),
+                    ]);
+
+                    // Update stats
+                    if (stats) {
+                        document.getElementById("totalKeys").textContent =
+                            stats.totalKeys || 0;
+                        document.getElementById("activeKeys").textContent =
+                            stats.activeKeys || 0;
+                        document.getElementById("todayRevenue").textContent =
+                            "$" + (stats.todayRevenue || 0).toFixed(2);
+                    }
+
+                    // Store data
+                    keysData = keys || [];
+                    ordersData = orders || [];
+
+                    // Update current tab
+                    const activeTab = document.querySelector(
+                        ".tab-content.active",
+                    );
+                    if (activeTab) {
+                        const tabId = activeTab.id;
+                        if (tabId === "keysTab") loadKeys();
+                        else if (tabId === "ordersTab") loadOrders();
+                    }
+                } catch (error) {
+                    console.error("Error refreshing data:", error);
+                }
+            }
+
+            async function fetchData(endpoint) {
+                if (!config.jwtToken || !config.backendUrl) {
+                    throw new Error("Not configured");
+                }
+
+                try {
+                    const response = await fetch(config.backendUrl + endpoint, {
+                        headers: {
+                            Authorization: `Bearer ${config.jwtToken}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+
+                    if (response.status === 401) {
+                        showNotification(
+                            "Session expired, please login again",
+                            "error",
+                        );
+                        logout();
+                        return null;
+                    }
+
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                } catch (error) {
+                    console.error("Fetch error:", error);
                     return null;
                 }
-                
-                if (response.ok) {
-                    return await response.json();
-                }
-                throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-                console.error('Fetch error:', error);
-                return null;
             }
-        }
 
-        function loadKeys() {
-            const tbody = document.getElementById('keysTableBody');
-            tbody.innerHTML = '';
+            function loadKeys() {
+                const tbody = document.getElementById("keysTableBody");
+                tbody.innerHTML = "";
 
-            keysData.forEach(key => {
-                const row = document.createElement('tr');
-                const status = new Date(key.expires_at) < new Date() ? 'expired' : 'active';
-                const statusClass = status === 'active' ? 'status-active' : 'status-expired';
+                keysData.forEach((key) => {
+                    const row = document.createElement("tr");
+                    const status =
+                        new Date(key.expires_at) < new Date()
+                            ? "expired"
+                            : "active";
+                    const statusClass =
+                        status === "active"
+                            ? "status-active"
+                            : "status-expired";
 
-                // Sanitize display
-                const safeEmail = (key.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const safePlan = (key.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    // Sanitize display
+                    const safeEmail = (key.email || "N/A")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;");
+                    const safePlan = (key.plan || "N/A")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;");
 
-                row.innerHTML = `
+                    row.innerHTML = `
                     <td>
-                        <div class="key-display" onclick="copyKey('${key.key_display || 'HIDDEN'}')">${key.key_display || 'HIDDEN'}</div>
+                        <div class="key-display" onclick="copyKey('${key.key_display || "HIDDEN"}')">${key.key_display || "HIDDEN"}</div>
                     </td>
                     <td>${safeEmail}</td>
                     <td>${safePlan}</td>
@@ -795,22 +945,26 @@
                         <button class="btn btn-danger" onclick="deleteKey('${key.id}')">Delete</button>
                     </td>
                 `;
-                tbody.appendChild(row);
-            });
-        }
+                    tbody.appendChild(row);
+                });
+            }
 
-        function loadOrders() {
-            const tbody = document.getElementById('ordersTableBody');
-            tbody.innerHTML = '';
+            function loadOrders() {
+                const tbody = document.getElementById("ordersTableBody");
+                tbody.innerHTML = "";
 
-            ordersData.forEach(order => {
-                const row = document.createElement('tr');
-                
-                // Sanitize display
-                const safeEmail = (order.email || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const safePlan = (order.plan || 'N/A').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                
-                row.innerHTML = `
+                ordersData.forEach((order) => {
+                    const row = document.createElement("tr");
+
+                    // Sanitize display
+                    const safeEmail = (order.email || "N/A")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;");
+                    const safePlan = (order.plan || "N/A")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;");
+
+                    row.innerHTML = `
                     <td>${order.order_number}</td>
                     <td>${safeEmail}</td>
                     <td>${safePlan}</td>
@@ -818,160 +972,204 @@
                     <td>${new Date(order.created_at).toLocaleDateString()}</td>
                     <td><span class="status-active">COMPLETED</span></td>
                 `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Key Generation with JWT
-        async function handleGenerate(e) {
-            e.preventDefault();
-            
-            if (!config.jwtToken || !config.backendUrl) {
-                showNotification('Please configure backend and login', 'error');
-                return;
-            }
-            
-            const email = document.getElementById('genEmail').value;
-            const plan = document.getElementById('genPlan').value;
-            const price = parseFloat(document.getElementById('genPrice').value);
-            const customExpiry = document.getElementById('genExpiry').value;
-
-            try {
-                const response = await fetch(config.backendUrl + '/api/admin/generate-key', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${config.jwtToken}`
-                    },
-                    body: JSON.stringify({
-                        email,
-                        plan,
-                        price,
-                        customExpiry: customExpiry || null
-                    })
+                    tbody.appendChild(row);
                 });
+            }
 
-                if (response.status === 401) {
-                    showNotification('Session expired, please login again', 'error');
-                    logout();
+            // Key Generation with JWT
+            async function handleGenerate(e) {
+                e.preventDefault();
+
+                if (!config.jwtToken || !config.backendUrl) {
+                    showNotification(
+                        "Please configure backend and login",
+                        "error",
+                    );
                     return;
                 }
 
-                const result = await response.json();
-                
-                if (result.success) {
-                    document.getElementById('newKeyDisplay').textContent = result.key;
-                    document.getElementById('generatedKey').style.display = 'block';
-                    document.getElementById('generateForm').reset();
-                    showNotification('Key generated successfully!', 'success');
-                    refreshData();
-                } else {
-                    showNotification(result.error || 'Failed to generate key', 'error');
-                }
-            } catch (error) {
-                console.error('Generate key error:', error);
-                showNotification('Error generating key', 'error');
-            }
-        }
+                const email = document.getElementById("genEmail").value;
+                const plan = document.getElementById("genPlan").value;
+                const price = parseFloat(
+                    document.getElementById("genPrice").value,
+                );
+                const customExpiry = document.getElementById("genExpiry").value;
 
-        // Utility Functions
-        function copyKey(key) {
-            navigator.clipboard.writeText(key).then(() => {
-                showNotification('Key copied to clipboard!', 'success');
-            }).catch(() => {
-                showNotification('Failed to copy key', 'error');
-            });
-        }
+                try {
+                    const response = await fetch(
+                        config.backendUrl + "/api/admin/generate-key",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${config.jwtToken}`,
+                            },
+                            body: JSON.stringify({
+                                email,
+                                plan,
+                                price,
+                                customExpiry: customExpiry || null,
+                            }),
+                        },
+                    );
 
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        function saveSettings() {
-            const newBackendUrl = document.getElementById('backendUrl').value;
-            const newRefreshInterval = parseInt(document.getElementById('refreshInterval').value) * 1000;
-            
-            if (newBackendUrl) {
-                config.backendUrl = newBackendUrl;
-                localStorage.setItem('cpAdminBackendUrl', newBackendUrl);
-            }
-            
-            config.refreshInterval = newRefreshInterval;
-            localStorage.setItem('cpAdminRefreshInterval', newRefreshInterval);
-            
-            // Reset refresh interval
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-                refreshInterval = setInterval(refreshData, config.refreshInterval);
-            }
-            
-            showNotification('Settings saved!', 'success');
-        }
-
-        function loadSettings() {
-            const savedUrl = localStorage.getItem('cpAdminBackendUrl');
-            const savedInterval = localStorage.getItem('cpAdminRefreshInterval');
-            
-            if (savedUrl) {
-                config.backendUrl = savedUrl;
-                document.getElementById('backendUrl').value = savedUrl;
-            }
-            
-            if (savedInterval) {
-                config.refreshInterval = parseInt(savedInterval);
-                document.getElementById('refreshInterval').value = config.refreshInterval / 1000;
-            }
-        }
-
-        // Key Management Functions with JWT
-        async function deleteKey(keyId) {
-            if (!confirm('Are you sure you want to delete this key?')) return;
-            
-            if (!config.jwtToken || !config.backendUrl) {
-                showNotification('Not configured', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch(config.backendUrl + `/api/admin/delete-key/${keyId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${config.jwtToken}`
+                    if (response.status === 401) {
+                        showNotification(
+                            "Session expired, please login again",
+                            "error",
+                        );
+                        logout();
+                        return;
                     }
-                });
-                
-                if (response.status === 401) {
-                    showNotification('Session expired', 'error');
-                    logout();
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        document.getElementById("newKeyDisplay").textContent =
+                            result.key;
+                        document.getElementById("generatedKey").style.display =
+                            "block";
+                        document.getElementById("generateForm").reset();
+                        showNotification(
+                            "Key generated successfully!",
+                            "success",
+                        );
+                        refreshData();
+                    } else {
+                        showNotification(
+                            result.error || "Failed to generate key",
+                            "error",
+                        );
+                    }
+                } catch (error) {
+                    console.error("Generate key error:", error);
+                    showNotification("Error generating key", "error");
+                }
+            }
+
+            // Utility Functions
+            function copyKey(key) {
+                navigator.clipboard
+                    .writeText(key)
+                    .then(() => {
+                        showNotification("Key copied to clipboard!", "success");
+                    })
+                    .catch(() => {
+                        showNotification("Failed to copy key", "error");
+                    });
+            }
+
+            function showNotification(message, type = "success") {
+                const notification = document.createElement("div");
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.opacity = "0";
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            function saveSettings() {
+                const newBackendUrl =
+                    document.getElementById("backendUrl").value;
+                const newRefreshInterval =
+                    parseInt(document.getElementById("refreshInterval").value) *
+                    1000;
+
+                if (newBackendUrl) {
+                    config.backendUrl = newBackendUrl;
+                    localStorage.setItem("cpAdminBackendUrl", newBackendUrl);
+                }
+
+                config.refreshInterval = newRefreshInterval;
+                localStorage.setItem(
+                    "cpAdminRefreshInterval",
+                    newRefreshInterval,
+                );
+
+                // Reset refresh interval
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = setInterval(
+                        refreshData,
+                        config.refreshInterval,
+                    );
+                }
+
+                showNotification("Settings saved!", "success");
+            }
+
+            function loadSettings() {
+                const savedUrl = localStorage.getItem("cpAdminBackendUrl");
+                const savedInterval = localStorage.getItem(
+                    "cpAdminRefreshInterval",
+                );
+
+                if (savedUrl) {
+                    config.backendUrl = savedUrl;
+                    document.getElementById("backendUrl").value = savedUrl;
+                }
+
+                if (savedInterval) {
+                    config.refreshInterval = parseInt(savedInterval);
+                    document.getElementById("refreshInterval").value =
+                        config.refreshInterval / 1000;
+                }
+            }
+
+            // Key Management Functions with JWT
+            async function deleteKey(keyId) {
+                if (!confirm("Are you sure you want to delete this key?"))
+                    return;
+
+                if (!config.jwtToken || !config.backendUrl) {
+                    showNotification("Not configured", "error");
                     return;
                 }
-                
-                if (response.ok) {
-                    showNotification('Key deleted successfully!', 'success');
-                    refreshData();
-                } else {
-                    const error = await response.json();
-                    showNotification(error.error || 'Failed to delete key', 'error');
-                }
-            } catch (error) {
-                showNotification('Error deleting key', 'error');
-            }
-        }
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
+                try {
+                    const response = await fetch(
+                        config.backendUrl + `/api/admin/delete-key/${keyId}`,
+                        {
+                            method: "DELETE",
+                            headers: {
+                                Authorization: `Bearer ${config.jwtToken}`,
+                            },
+                        },
+                    );
+
+                    if (response.status === 401) {
+                        showNotification("Session expired", "error");
+                        logout();
+                        return;
+                    }
+
+                    if (response.ok) {
+                        showNotification(
+                            "Key deleted successfully!",
+                            "success",
+                        );
+                        refreshData();
+                    } else {
+                        const error = await response.json();
+                        showNotification(
+                            error.error || "Failed to delete key",
+                            "error",
+                        );
+                    }
+                } catch (error) {
+                    showNotification("Error deleting key", "error");
+                }
             }
-        });
-    </script>
-</body>
+
+            // Cleanup on page unload
+            window.addEventListener("beforeunload", () => {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+            });
+        </script>
+    </body>
 </html>
