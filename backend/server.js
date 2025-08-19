@@ -88,12 +88,60 @@ app.use(
     }),
 );
 
+// ============================================
+// SECURE CORS CONFIGURATION - FIXED ORDER
+// ============================================
+const corsOptions = {
+    origin: function (origin, callback) {
+        // List of allowed origins
+        const allowedOrigins = [
+            "https://learnlabs.shop",
+            "https://www.learnlabs.shop",
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "http://localhost:5500",
+            "http://127.0.0.1:5500",
+            "http://127.0.0.1:3000",
+        ];
+
+        // Allow requests with no origin (like mobile apps or Postman)
+        if (!origin) return callback(null, true);
+
+        // Check if origin is allowed
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            // In dev, allow all origins
+            if (process.env.NODE_ENV !== "production") {
+                callback(null, true);
+            } else {
+                console.log(`CORS blocked origin: ${origin}`);
+                callback(new Error("Not allowed by CORS"));
+            }
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-API-Token",
+        "stripe-signature",
+    ],
+    optionsSuccessStatus: 200,
+};
+
+// CRITICAL: Apply CORS BEFORE any other middleware that might redirect
+app.options("*", cors(corsOptions)); // Handle preflight requests
+app.use(cors(corsOptions)); // Handle actual requests
+
+// NOW handle trailing slashes - AFTER CORS
 app.use((req, res, next) => {
     // Skip redirect for OPTIONS requests (CORS preflight)
     if (req.method === "OPTIONS") {
         return next();
     }
-
+    
     // Remove trailing slashes to prevent Replit redirects
     if (req.path !== "/" && req.path.endsWith("/")) {
         const newPath = req.path.slice(0, -1);
@@ -168,57 +216,8 @@ function validateEnvironment() {
 
 const isConfigured = validateEnvironment();
 
-// ============================================
-// SECURE CORS CONFIGURATION - FIXED
-// ============================================
-const corsOptions = {
-    origin: function (origin, callback) {
-        // List of allowed origins
-        const allowedOrigins = [
-            "https://learnlabs.shop",
-            "https://www.learnlabs.shop",
-            "http://localhost:3000",
-            "http://localhost:5000",
-            "http://localhost:5500",
-            "http://127.0.0.1:5500",
-            "http://127.0.0.1:3000",
-        ];
-
-        // Allow requests with no origin (like mobile apps or Postman)
-        if (!origin) return callback(null, true);
-
-        // Check if origin is allowed
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            // In dev, allow all origins
-            if (process.env.NODE_ENV !== "production") {
-                callback(null, true);
-            } else {
-                console.log(`CORS blocked origin: ${origin}`);
-                callback(new Error("Not allowed by CORS"));
-            }
-        }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "X-API-Token",
-        "stripe-signature",
-    ],
-    optionsSuccessStatus: 200,
-};
-
 // Middleware order is important!
 app.use("/api/webhook", express.raw({ type: "application/json" }));
-
-// HANDLE OPTIONS FIRST - BEFORE ANYTHING ELSE
-app.options("*", cors(corsOptions)); // Let cors library handle it
-
-// THEN Apply CORS
-app.use(cors(corsOptions));
 
 // Then JSON and static files
 app.use(express.json());
