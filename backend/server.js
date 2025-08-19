@@ -1169,7 +1169,8 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
             .json({ error: "Username and password required" });
     }
 
-    if (!CONFIG.ADMIN_USERNAME || !CONFIG.ADMIN_PASSWORD_HASH) {
+    // Check if admin is configured
+    if (!CONFIG.ADMIN_USERNAME) {
         return res.status(503).json({ error: "Admin not configured" });
     }
 
@@ -1177,11 +1178,26 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
         return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Verify password against hash
-    const validPassword = await bcrypt.compare(
-        password,
-        CONFIG.ADMIN_PASSWORD_HASH,
-    );
+    // Check BOTH plain password and hash - PRODUCTION READY
+    let validPassword = false;
+
+    // First check plain password if it exists
+    if (process.env.ADMIN_PASSWORD) {
+        validPassword = password === process.env.ADMIN_PASSWORD;
+    }
+
+    // If plain password didn't match, try hash
+    if (!validPassword && CONFIG.ADMIN_PASSWORD_HASH) {
+        try {
+            validPassword = await bcrypt.compare(
+                password,
+                CONFIG.ADMIN_PASSWORD_HASH,
+            );
+        } catch (e) {
+            // If bcrypt fails, hash might be invalid
+            validPassword = false;
+        }
+    }
 
     if (!validPassword) {
         return res.status(401).json({ error: "Invalid credentials" });
