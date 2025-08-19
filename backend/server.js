@@ -1,5 +1,5 @@
-// REMOVE ALL THE OLD CORS CODE (lines 11-200 approximately)
-// and REPLACE with ONLY this clean version:
+// REPLACE the entire top section of your server.js with this
+// (from the beginning through the middleware setup):
 
 const express = require("express");
 const cors = require("cors");
@@ -20,45 +20,28 @@ console.log("🚀 Starting Secure CanvasPro Backend...");
 // CONFIGURATION FROM ENVIRONMENT VARIABLES ONLY
 // ============================================
 const CONFIG = {
-    // JWT Secret for API authentication
     JWT_SECRET:
         process.env.JWT_SECRET || crypto.randomBytes(64).toString("hex"),
-
-    // API Authentication Token (for Tampermonkey script)
     API_SECRET_TOKEN: process.env.API_SECRET_TOKEN,
-
-    // Admin credentials - MUST be hashed in production
     ADMIN_USERNAME: process.env.ADMIN_USERNAME,
-    ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH, // Store bcrypt hash, not plain password
-
-    // Stripe API Keys - FROM ENV ONLY, NO HARDCODED VALUES
+    ADMIN_PASSWORD_HASH: process.env.ADMIN_PASSWORD_HASH,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-
-    // Email service
     RESEND_API_KEY: process.env.RESEND_API_KEY,
-
-    // Encryption keys
     KEY_ENCRYPTION_KEY:
         process.env.KEY_ENCRYPTION_KEY ||
         crypto.randomBytes(32).toString("hex"),
     KEY_ENCRYPTION_IV:
         process.env.KEY_ENCRYPTION_IV || crypto.randomBytes(16).toString("hex"),
-
-    // Security settings
     NODE_ENV: process.env.NODE_ENV || "development",
-
-    // Session secret
     SESSION_SECRET:
         process.env.SESSION_SECRET || crypto.randomBytes(64).toString("hex"),
-
-    // OpenAI API Key
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 };
 
 // ============================================
-// SINGLE CORS CONFIGURATION - PRODUCTION READY
+// CORS CONFIGURATION - MUST BE FIRST!
 // ============================================
 const allowedOrigins = [
     "https://learnlabs.shop",
@@ -70,37 +53,78 @@ const allowedOrigins = [
     "http://127.0.0.1:3000",
 ];
 
-const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or Postman)
-        if (!origin) return callback(null, true);
+// Handle OPTIONS requests manually BEFORE anything else
+app.options("*", (req, res) => {
+    const origin = req.headers.origin;
+    if (!origin || allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin || "*");
+        res.header(
+            "Access-Control-Allow-Methods",
+            "GET, POST, PUT, DELETE, OPTIONS",
+        );
+        res.header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization, X-API-Token, stripe-signature",
+        );
+        res.header("Access-Control-Allow-Credentials", "true");
+        res.header("Access-Control-Max-Age", "86400");
+    }
+    res.sendStatus(200);
+});
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.log(`CORS blocked origin: ${origin}`);
-            callback(new Error("Not allowed by CORS"));
+// Then apply CORS for all other requests
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (!origin || allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin || "*");
+        res.header("Access-Control-Allow-Credentials", "true");
+    }
+    next();
+});
+
+// ============================================
+// ENVIRONMENT VALIDATION
+// ============================================
+function validateEnvironment() {
+    const required = [
+        "API_SECRET_TOKEN",
+        "ADMIN_USERNAME",
+        "ADMIN_PASSWORD_HASH",
+        "JWT_SECRET",
+        "KEY_ENCRYPTION_KEY",
+        "KEY_ENCRYPTION_IV",
+    ];
+
+    const missing = required.filter((key) => !process.env[key]);
+
+    if (missing.length > 0) {
+        console.error("❌ CRITICAL: Missing required environment variables:");
+        missing.forEach((key) => console.error(`   - ${key}`));
+
+        if (CONFIG.NODE_ENV === "production") {
+            process.exit(1);
         }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "X-API-Token",
-        "stripe-signature",
-    ],
-    optionsSuccessStatus: 200,
-};
+    }
 
-// Apply CORS
-app.use(cors(corsOptions));
+    return missing.length === 0;
+}
+
+const isConfigured = validateEnvironment();
 
 // ============================================
-// SECURITY MIDDLEWARE
+// MIDDLEWARE ORDER IS CRITICAL!
 // ============================================
 
-// Use Helmet for security headers with adjusted CSP
+// 1. Webhook needs raw body (MUST be before express.json)
+app.use("/api/webhook", express.raw({ type: "application/json" }));
+
+// 2. JSON parsing
+app.use(express.json());
+
+// 3. Static files
+app.use(express.static("./"));
+
+// 4. Helmet for security (AFTER CORS)
 app.use(
     helmet({
         contentSecurityPolicy: {
@@ -125,7 +149,7 @@ app.use(
     }),
 );
 
-// Handle trailing slashes
+// 5. Remove trailing slashes (SKIP for OPTIONS)
 app.use((req, res, next) => {
     if (req.method === "OPTIONS") {
         return next();
@@ -137,7 +161,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rate limiting for API endpoints
+// 6. Rate limiting (SKIP for OPTIONS)
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -152,7 +176,6 @@ const strictLimiter = rateLimit({
     skip: (req) => req.method === "OPTIONS",
 });
 
-// Apply rate limiting
 app.use("/api/", apiLimiter);
 app.use("/api/validate-key", strictLimiter);
 app.use("/api/admin/login", strictLimiter);
@@ -202,8 +225,6 @@ function validateEnvironment() {
 
     return missing.length === 0;
 }
-
-const isConfigured = validateEnvironment();
 
 // Middleware order is important!
 app.use("/api/webhook", express.raw({ type: "application/json" }));
@@ -1147,7 +1168,9 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ error: "Username and password required" });
+        return res
+            .status(400)
+            .json({ error: "Username and password required" });
     }
 
     if (!CONFIG.ADMIN_USERNAME) {
@@ -1169,7 +1192,10 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
     // Then check hashed password (for production)
     if (!validPassword && CONFIG.ADMIN_PASSWORD_HASH) {
         try {
-            validPassword = await bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH);
+            validPassword = await bcrypt.compare(
+                password,
+                CONFIG.ADMIN_PASSWORD_HASH,
+            );
         } catch (e) {
             validPassword = false;
         }
@@ -1186,7 +1212,7 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
     db.run(
         `INSERT INTO admin_logs (admin_user, action, ip_address, details)
          VALUES (?, ?, ?, ?)`,
-        [username, "login", req.ip, "Successful login"]
+        [username, "login", req.ip, "Successful login"],
     );
 
     res.json({
