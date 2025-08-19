@@ -50,6 +50,7 @@ const CONFIG = {
 const allowedOrigins = [
     "https://learnlabs.shop",
     "https://www.learnlabs.shop",
+    "https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev", // Add this!
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:5500",
@@ -77,11 +78,14 @@ app.options("*", (req, res) => {
 });
 
 // Then apply CORS for all other requests
-app.use((req, res, next) => {
+// Add this specific CORS handler for admin routes
+app.use("/api/admin/*", (req, res, next) => {
     const origin = req.headers.origin;
-    if (!origin || allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin || "*");
+    if (allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin);
         res.header("Access-Control-Allow-Credentials", "true");
+        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Token");
     }
     next();
 });
