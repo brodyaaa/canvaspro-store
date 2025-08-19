@@ -9,7 +9,11 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const path = require("path");
 const app = express();
+console.log("Current dir:", __dirname);
+console.log("CWD:", process.cwd());
+console.log("REPL_SLUG:", process.env.REPL_SLUG);
 app.set("trust proxy", 1);
 
 const PORT = process.env.PORT || 3000;
@@ -231,7 +235,7 @@ app.use("/api/webhook", express.raw({ type: "application/json" }));
 
 // Then JSON and static files
 app.use(express.json());
-app.use(express.static("./")); // Serve static files for admin panel
+app.use(express.static(path.join(__dirname, "public")));
 
 // ============================================
 // API AUTHENTICATION MIDDLEWARE
