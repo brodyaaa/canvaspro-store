@@ -44,16 +44,7 @@ const CONFIG = {
 // ============================================
 // CORS CONFIGURATION - ULTRA PERMISSIVE FOR DEBUGGING
 // ============================================
-const allowedOrigins = [
-    "https://learnlabs.shop",
-    "https://www.learnlabs.shop",
-    "https://09866e77-2aca-4349-84a8-291e2b30be88-00-cgkzkluqb8u4.janeway.replit.dev",
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://127.0.0.1:3000",
-];
+const allowedOrigins = ["https://learnlabs.shop", "https://www.learnlabs.shop"];
 
 // Use the cors package properly
 app.use(
@@ -102,20 +93,23 @@ app.options("*", (req, res) => {
 // GENERAL CORS MIDDLEWARE FOR ALL ROUTES - THIS WAS MISSING!
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    console.log("Request from origin:", origin, "to path:", req.path);
 
-    if (!origin || allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin || "*");
+    if (allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin);
         res.header("Access-Control-Allow-Credentials", "true");
-        res.header(
-            "Access-Control-Allow-Methods",
-            "GET, POST, PUT, DELETE, OPTIONS",
-        );
-        res.header(
-            "Access-Control-Allow-Headers",
-            "Content-Type, Authorization, X-API-Token, stripe-signature",
-        );
     }
+    // Don't set headers if origin not allowed
+
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+
     next();
 });
 
