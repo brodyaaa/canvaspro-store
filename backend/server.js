@@ -70,8 +70,16 @@ app.use(
             directives: {
                 defaultSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
-                frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+                scriptSrc: [
+                    "'self'",
+                    "'unsafe-inline'",
+                    "https://js.stripe.com",
+                ],
+                frameSrc: [
+                    "'self'",
+                    "https://js.stripe.com",
+                    "https://hooks.stripe.com",
+                ],
                 imgSrc: ["'self'", "data:", "https:", "https://i.imgur.com"],
                 connectSrc: ["'self'", "https://api.stripe.com"],
             },
@@ -159,7 +167,7 @@ const corsOptions = {
             "http://localhost:5000",
             "http://localhost:5500",
             "http://127.0.0.1:5500",
-            "http://127.0.0.1:3000"
+            "http://127.0.0.1:3000",
         ];
 
         // Allow requests with no origin (like mobile apps or Postman)
@@ -197,6 +205,23 @@ app.use(cors(corsOptions));
 
 // Handle OPTIONS preflight requests
 app.options("*", cors(corsOptions));
+
+app.use("/api/admin/*", (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+    );
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-API-Token",
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
 // Then JSON and static files
 app.use(express.json());
@@ -928,7 +953,10 @@ app.post("/api/webhook", async (req, res) => {
         const encryptedKey = encryptKey(licenseKey);
         const expiresAt = getExpiryDate(session.metadata.plan);
 
-        console.log("🔑 Generating key for:", session.customer_email || session.metadata.email);
+        console.log(
+            "🔑 Generating key for:",
+            session.customer_email || session.metadata.email,
+        );
         console.log("🔑 License Key:", licenseKey);
         console.log("📅 Expires at:", expiresAt);
 
@@ -978,7 +1006,9 @@ app.post("/api/webhook", async (req, res) => {
                         const emailSent = await sendOrderEmail({
                             orderNumber,
                             licenseKey,
-                            email: session.customer_email || session.metadata.email,
+                            email:
+                                session.customer_email ||
+                                session.metadata.email,
                             plan: session.metadata.plan,
                             expiresAt,
                         });
@@ -988,7 +1018,7 @@ app.post("/api/webhook", async (req, res) => {
                         } else {
                             console.error("❌ Failed to send order email");
                         }
-                    }
+                    },
                 );
 
                 console.log("✅ Webhook order processed:", {
