@@ -89,6 +89,11 @@ app.use(
 );
 
 app.use((req, res, next) => {
+    // Skip redirect for OPTIONS requests (CORS preflight)
+    if (req.method === "OPTIONS") {
+        return next();
+    }
+
     // Remove trailing slashes to prevent Replit redirects
     if (req.path !== "/" && req.path.endsWith("/")) {
         const newPath = req.path.slice(0, -1);
@@ -210,20 +215,7 @@ const corsOptions = {
 app.use("/api/webhook", express.raw({ type: "application/json" }));
 
 // HANDLE OPTIONS FIRST - BEFORE ANYTHING ELSE
-app.options("*", (req, res) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS",
-    );
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-API-Token, stripe-signature",
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Max-Age", "86400");
-    return res.sendStatus(200);
-});
+app.options("*", cors(corsOptions)); // Let cors library handle it
 
 // THEN Apply CORS
 app.use(cors(corsOptions));
