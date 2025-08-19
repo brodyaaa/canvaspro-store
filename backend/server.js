@@ -1,5 +1,6 @@
-// server.js - SECURE VERSION FOR REPLIT AND GITHUB
-// NO HARDCODED SECRETS - ALL FROM ENVIRONMENT VARIABLES
+// REMOVE ALL THE OLD CORS CODE (lines 11-200 approximately)
+// and REPLACE with ONLY this clean version:
+
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
@@ -10,67 +11,7 @@ const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const app = express();
 app.set("trust proxy", 1);
-const allowedOrigins = [
-    "https://learnlabs.shop",
-    "https://www.learnlabs.shop",
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://127.0.0.1:3000",
-];
 
-// Nuclear fix WITH origin validation
-app.use((req, res, next) => {
-    // Only handle OPTIONS for /api routes
-    if (req.method === "OPTIONS" && req.path.startsWith("/api")) {
-        const origin = req.headers.origin;
-
-        // Check if origin is allowed (same logic as corsOptions)
-        if (
-            !origin ||
-            allowedOrigins.includes(origin) ||
-            process.env.NODE_ENV !== "production"
-        ) {
-            // Origin is allowed
-            res.header("Access-Control-Allow-Origin", origin || "*");
-            res.header(
-                "Access-Control-Allow-Methods",
-                "GET, POST, PUT, DELETE, OPTIONS",
-            );
-            res.header(
-                "Access-Control-Allow-Headers",
-                "Content-Type, Authorization, X-API-Token, stripe-signature",
-            );
-            res.header("Access-Control-Allow-Credentials", "true");
-            res.header("Access-Control-Max-Age", "86400");
-            return res.sendStatus(200);
-        } else {
-            // Origin not allowed - reject
-            console.log(`CORS blocked origin: ${origin}`);
-            return res.status(403).json({ error: "CORS policy violation" });
-        }
-    }
-    next();
-});
-
-// Also add CORS headers for actual (non-OPTIONS) requests
-app.use((req, res, next) => {
-    if (req.path.startsWith("/api") && req.method !== "OPTIONS") {
-        const origin = req.headers.origin;
-
-        // Same origin validation
-        if (
-            !origin ||
-            allowedOrigins.includes(origin) ||
-            process.env.NODE_ENV !== "production"
-        ) {
-            res.header("Access-Control-Allow-Origin", origin || "*");
-            res.header("Access-Control-Allow-Credentials", "true");
-        }
-    }
-    next();
-});
 const PORT = process.env.PORT || 3000;
 
 console.log("🚀 Starting Secure CanvasPro Backend...");
@@ -106,9 +47,6 @@ const CONFIG = {
         process.env.KEY_ENCRYPTION_IV || crypto.randomBytes(16).toString("hex"),
 
     // Security settings
-    ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || "")
-        .split(",")
-        .filter(Boolean),
     NODE_ENV: process.env.NODE_ENV || "development",
 
     // Session secret
@@ -116,39 +54,32 @@ const CONFIG = {
         process.env.SESSION_SECRET || crypto.randomBytes(64).toString("hex"),
 
     // OpenAI API Key
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY, // Set in Replit Secrets
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
 };
 
 // ============================================
-// SECURE CORS CONFIGURATION - FIXED ORDER
+// SINGLE CORS CONFIGURATION - PRODUCTION READY
 // ============================================
+const allowedOrigins = [
+    "https://learnlabs.shop",
+    "https://www.learnlabs.shop",
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:3000",
+];
+
 const corsOptions = {
     origin: function (origin, callback) {
-        // List of allowed origins
-        const allowedOrigins = [
-            "https://learnlabs.shop",
-            "https://www.learnlabs.shop",
-            "http://localhost:3000",
-            "http://localhost:5000",
-            "http://localhost:5500",
-            "http://127.0.0.1:5500",
-            "http://127.0.0.1:3000",
-        ];
-
         // Allow requests with no origin (like mobile apps or Postman)
         if (!origin) return callback(null, true);
 
-        // Check if origin is allowed
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            // In dev, allow all origins
-            if (process.env.NODE_ENV !== "production") {
-                callback(null, true);
-            } else {
-                console.log(`CORS blocked origin: ${origin}`);
-                callback(new Error("Not allowed by CORS"));
-            }
+            console.log(`CORS blocked origin: ${origin}`);
+            callback(new Error("Not allowed by CORS"));
         }
     },
     credentials: true,
@@ -162,9 +93,8 @@ const corsOptions = {
     optionsSuccessStatus: 200,
 };
 
-// CRITICAL: Apply CORS BEFORE any other middleware that might redirect
-// app.options("*", cors(corsOptions));
-// app.use(cors(corsOptions));
+// Apply CORS
+app.use(cors(corsOptions));
 
 // ============================================
 // SECURITY MIDDLEWARE
@@ -195,14 +125,11 @@ app.use(
     }),
 );
 
-// NOW handle trailing slashes - AFTER CORS
+// Handle trailing slashes
 app.use((req, res, next) => {
-    // Skip redirect for OPTIONS requests (CORS preflight)
     if (req.method === "OPTIONS") {
         return next();
     }
-
-    // Remove trailing slashes to prevent Replit redirects
     if (req.path !== "/" && req.path.endsWith("/")) {
         const newPath = req.path.slice(0, -1);
         return res.redirect(301, newPath);
@@ -215,14 +142,14 @@ const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     message: "Too many requests from this IP, please try again later.",
-    skip: (req) => req.method === "OPTIONS", // ADD THIS
+    skip: (req) => req.method === "OPTIONS",
 });
 
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
     message: "Too many attempts, please try again later.",
-    skip: (req) => req.method === "OPTIONS", // ADD THIS
+    skip: (req) => req.method === "OPTIONS",
 });
 
 // Apply rate limiting
@@ -1212,17 +1139,17 @@ app.post("/api/client/lookup", (req, res) => {
     }
 });
 
+// FIND the admin login endpoint in your server.js (around line 1369)
+// DELETE the entire old version and REPLACE with this clean one:
+
 // Admin login endpoint
 app.post("/api/admin/login", strictLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res
-            .status(400)
-            .json({ error: "Username and password required" });
+        return res.status(400).json({ error: "Username and password required" });
     }
 
-    // Check if admin is configured
     if (!CONFIG.ADMIN_USERNAME) {
         return res.status(503).json({ error: "Admin not configured" });
     }
@@ -1231,23 +1158,19 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
         return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Check BOTH plain password and hash - PRODUCTION READY
+    // Check password
     let validPassword = false;
 
-    // First check plain password if it exists
+    // Check plain password first (for development)
     if (process.env.ADMIN_PASSWORD) {
         validPassword = password === process.env.ADMIN_PASSWORD;
     }
 
-    // If plain password didn't match, try hash
+    // Then check hashed password (for production)
     if (!validPassword && CONFIG.ADMIN_PASSWORD_HASH) {
         try {
-            validPassword = await bcrypt.compare(
-                password,
-                CONFIG.ADMIN_PASSWORD_HASH,
-            );
+            validPassword = await bcrypt.compare(password, CONFIG.ADMIN_PASSWORD_HASH);
         } catch (e) {
-            // If bcrypt fails, hash might be invalid
             validPassword = false;
         }
     }
@@ -1263,7 +1186,7 @@ app.post("/api/admin/login", strictLimiter, async (req, res) => {
     db.run(
         `INSERT INTO admin_logs (admin_user, action, ip_address, details)
          VALUES (?, ?, ?, ?)`,
-        [username, "login", req.ip, "Successful login"],
+        [username, "login", req.ip, "Successful login"]
     );
 
     res.json({
