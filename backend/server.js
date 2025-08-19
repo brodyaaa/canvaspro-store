@@ -8,9 +8,69 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
-
 const app = express();
 app.set("trust proxy", 1);
+const allowedOrigins = [
+    "https://learnlabs.shop",
+    "https://www.learnlabs.shop",
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:3000",
+];
+
+// Nuclear fix WITH origin validation
+app.use((req, res, next) => {
+    // Only handle OPTIONS for /api routes
+    if (req.method === "OPTIONS" && req.path.startsWith("/api")) {
+        const origin = req.headers.origin;
+
+        // Check if origin is allowed (same logic as corsOptions)
+        if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            process.env.NODE_ENV !== "production"
+        ) {
+            // Origin is allowed
+            res.header("Access-Control-Allow-Origin", origin || "*");
+            res.header(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, OPTIONS",
+            );
+            res.header(
+                "Access-Control-Allow-Headers",
+                "Content-Type, Authorization, X-API-Token, stripe-signature",
+            );
+            res.header("Access-Control-Allow-Credentials", "true");
+            res.header("Access-Control-Max-Age", "86400");
+            return res.sendStatus(200);
+        } else {
+            // Origin not allowed - reject
+            console.log(`CORS blocked origin: ${origin}`);
+            return res.status(403).json({ error: "CORS policy violation" });
+        }
+    }
+    next();
+});
+
+// Also add CORS headers for actual (non-OPTIONS) requests
+app.use((req, res, next) => {
+    if (req.path.startsWith("/api") && req.method !== "OPTIONS") {
+        const origin = req.headers.origin;
+
+        // Same origin validation
+        if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            process.env.NODE_ENV !== "production"
+        ) {
+            res.header("Access-Control-Allow-Origin", origin || "*");
+            res.header("Access-Control-Allow-Credentials", "true");
+        }
+    }
+    next();
+});
 const PORT = process.env.PORT || 3000;
 
 console.log("🚀 Starting Secure CanvasPro Backend...");
